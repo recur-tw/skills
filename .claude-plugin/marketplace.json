@@ -1,0 +1,14 @@
+{
+  "name": "recur-skills",
+  "owner": {
+    "name": "Recur",
+    "email": "hi@recur.tw"
+  },
+  "plugins": [
+    {
+      "name": "recur-skills",
+      "description": "Claude Code skills for integrating Recur - Taiwan's subscription payment platform",
+      "source": "."
+    }
+  ]
+}

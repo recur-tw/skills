@@ -7,7 +7,7 @@ Claude Code skills to help developers integrate [Recur](https://recur.tw) - Taiw
 ### Claude Code Plugin (Recommended)
 
 ```bash
-/plugin add recur-tw/skills
+/plugin marketplace add recur-tw/skills
 ```
 
 ### npm CLI
