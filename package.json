@@ -1,6 +1,6 @@
 {
   "name": "recur-skills",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Claude Code skills for Recur - Taiwan's subscription payment platform",
   "keywords": [
     "recur",
@@ -25,15 +25,15 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
     },
     "./skills/*": "./skills/*"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "bin": {
-    "recur-skills": "./dist/cli.js"
+    "recur-skills": "./dist/cli.mjs"
   },
   "files": [
     "dist",
@@ -41,11 +41,12 @@
     ".claude-plugin"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "version": "node scripts/sync-version.js && git add .claude-plugin/marketplace.json"
   },
   "dependencies": {
     "commander": "^12.1.0",
@@ -53,7 +54,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "tsup": "^8.3.5",
+    "tsdown": "^0.18.4",
     "typescript": "^5.7.3"
   },
   "engines": {

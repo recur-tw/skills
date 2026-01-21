@@ -9,7 +9,23 @@ Claude Code skills to help developers integrate [Recur](https://recur.tw) - Taiw
 /plugin install recur-skills@recur-skills
 ```
 
+## Getting Started
+
+Not sure where to begin? Ask Claude:
+
+```
+Recur 有什麼功能？
+```
+
+Or type `/recur-help` to see all available skills.
+
 ## Available Skills
+
+### recur-help
+
+List all available Recur skills and how to use them.
+
+**Triggers:** "Recur 有什麼功能", "help with Recur", "what can Recur do"
 
 ### recur-quickstart
 
