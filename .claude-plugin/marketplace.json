@@ -4,11 +4,21 @@
     "name": "Recur",
     "email": "hi@recur.tw"
   },
+  "metadata": {
+    "description": "Claude Code skills for integrating Recur - Taiwan's subscription payment platform",
+    "version": "1.0.0"
+  },
   "plugins": [
     {
       "name": "recur-skills",
-      "description": "Claude Code skills for integrating Recur - Taiwan's subscription payment platform",
-      "source": "."
+      "description": "Skills for Recur SDK integration including quickstart, checkout, webhooks, and entitlements",
+      "source": "./",
+      "skills": [
+        "./skills/recur-quickstart",
+        "./skills/recur-checkout",
+        "./skills/recur-webhooks",
+        "./skills/recur-entitlements"
+      ]
     }
   ]
 }
