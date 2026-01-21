@@ -1,0 +1,65 @@
+{
+  "name": "recur-skills",
+  "version": "0.0.1",
+  "description": "Claude Code skills for Recur - Taiwan's subscription payment platform",
+  "keywords": [
+    "recur",
+    "claude-code",
+    "skills",
+    "subscription",
+    "payments",
+    "taiwan",
+    "agent-skills"
+  ],
+  "homepage": "https://recur.tw/skills",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/recur-tw/skills"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Recur",
+    "email": "hi@recur.tw",
+    "url": "https://recur.tw"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./skills/*": "./skills/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "recur-skills": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    ".claude-plugin"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
