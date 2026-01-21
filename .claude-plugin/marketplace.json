@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Claude Code skills for integrating Recur - Taiwan's subscription payment platform",
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   "plugins": [
     {
@@ -18,12 +18,6 @@
         "./skills/recur-checkout",
         "./skills/recur-webhooks",
         "./skills/recur-entitlements"
-      ],
-      "commands": [
-        "./skills/recur-quickstart/SKILL.md",
-        "./skills/recur-checkout/SKILL.md",
-        "./skills/recur-webhooks/SKILL.md",
-        "./skills/recur-entitlements/SKILL.md"
       ]
     }
   ]

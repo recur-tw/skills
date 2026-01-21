@@ -1,5 +1,4 @@
 ---
-name: recur-checkout
 description: Implement Recur checkout flows including embedded, modal, and redirect modes. Use when adding payment buttons, checkout forms, subscription purchase flows, or when user mentions "checkout", "結帳", "付款按鈕", "embedded checkout".
 ---
 
