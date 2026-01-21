@@ -1,4 +1,5 @@
 ---
+name: recur-entitlements
 description: Implement access control and permission checking with Recur entitlements API. Use when building paywalls, checking subscription status, gating premium features, or when user mentions "paywall", "權限檢查", "entitlements", "access control", "premium features".
 ---
 
