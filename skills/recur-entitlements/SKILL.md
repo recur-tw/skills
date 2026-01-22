@@ -4,7 +4,7 @@ description: Implement access control and permission checking with Recur entitle
 license: MIT
 metadata:
   author: recur
-  version: "0.0.4"
+  version: "0.0.5"
 ---
 
 # Recur Entitlements & Access Control
