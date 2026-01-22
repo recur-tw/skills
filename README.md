@@ -4,6 +4,14 @@ Claude Code skills to help developers integrate [Recur](https://recur.tw) - Taiw
 
 ## Installation
 
+### npx skills add (Recommended)
+
+```bash
+npx @anthropic-ai/claude-code-skills add recur-tw/skills
+```
+
+### Claude Code Plugin
+
 ```bash
 /plugin marketplace add recur-tw/skills
 /plugin install recur-skills@recur-skills
