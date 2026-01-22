@@ -1,6 +1,6 @@
 {
   "name": "recur-skills",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Claude Code skills for Recur - Taiwan's subscription payment platform",
   "keywords": [
     "recur",
@@ -46,7 +46,7 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm build",
-    "version": "node scripts/sync-version.js && git add .claude-plugin/marketplace.json"
+    "version": "node scripts/sync-version.js && git add .claude-plugin/marketplace.json skills/*/SKILL.md"
   },
   "dependencies": {
     "commander": "^12.1.0",

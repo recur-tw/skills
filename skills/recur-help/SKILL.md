@@ -1,6 +1,10 @@
 ---
 name: recur-help
 description: List all available Recur skills and how to use them. Use when user asks "what can Recur do", "Recur skills", "Recur 有什麼功能", "help with Recur", "如何使用 Recur skills".
+license: MIT
+metadata:
+  author: recur
+  version: "0.0.4"
 ---
 
 # Recur Skills 使用指南

@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Claude Code skills for integrating Recur - Taiwan's subscription payment platform",
-    "version": "0.0.3"
+    "version": "0.0.4"
   },
   "plugins": [
     {
