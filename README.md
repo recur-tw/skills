@@ -2,7 +2,7 @@
 
 Skills to help developers integrate [Recur](https://recur.tw) - Taiwan's subscription payment platform.
 
-Supports Claude Code, Cursor, Windsurf, and other AI coding agents.
+Supports Claude Code, Cursor, Codex, GitHub Copilot, Gemini CLI, Antigravity, and other AI coding agents.
 
 ## Installation
 
