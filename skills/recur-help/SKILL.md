@@ -4,7 +4,7 @@ description: List all available Recur skills and how to use them. Use when user 
 license: MIT
 metadata:
   author: recur
-  version: "0.0.5"
+  version: "0.0.6"
 ---
 
 # Recur Skills 使用指南

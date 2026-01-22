@@ -1,6 +1,6 @@
 # Recur Skills - Agent Guidelines
 
-This document provides guidance for AI coding agents working with Recur payment integration skills.
+This document provides guidance for AI coding agents (Claude Code, Cursor, Windsurf, etc.) working with Recur payment integration skills.
 
 ## Repository Overview
 

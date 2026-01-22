@@ -4,7 +4,7 @@ description: Implement Recur checkout flows including embedded, modal, and redir
 license: MIT
 metadata:
   author: recur
-  version: "0.0.5"
+  version: "0.0.6"
 ---
 
 # Recur Checkout Integration

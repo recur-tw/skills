@@ -1,6 +1,8 @@
-# Recur Skills for Claude Code
+# Recur Skills
 
-Claude Code skills to help developers integrate [Recur](https://recur.tw) - Taiwan's subscription payment platform.
+Skills to help developers integrate [Recur](https://recur.tw) - Taiwan's subscription payment platform.
+
+Supports Claude Code, Cursor, Windsurf, and other AI coding agents.
 
 ## Installation
 
