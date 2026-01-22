@@ -18,14 +18,16 @@
         "./skills/recur-quickstart",
         "./skills/recur-checkout",
         "./skills/recur-webhooks",
-        "./skills/recur-entitlements"
+        "./skills/recur-entitlements",
+        "./skills/recur-portal"
       ],
       "commands": [
         "./skills/recur-help/SKILL.md",
         "./skills/recur-quickstart/SKILL.md",
         "./skills/recur-checkout/SKILL.md",
         "./skills/recur-webhooks/SKILL.md",
-        "./skills/recur-entitlements/SKILL.md"
+        "./skills/recur-entitlements/SKILL.md",
+        "./skills/recur-portal/SKILL.md"
       ]
     }
   ]

@@ -37,6 +37,7 @@ skills/
 | `recur-checkout` | Payment flows | "checkout", "結帳", "付款按鈕" |
 | `recur-webhooks` | Event handlers | "webhook", "付款通知" |
 | `recur-entitlements` | Access control | "paywall", "權限檢查" |
+| `recur-portal` | Customer self-service | "customer portal", "帳戶管理" |
 
 ## Skill Selection Guidelines
 
@@ -46,7 +47,8 @@ When a user asks about Recur integration, select the appropriate skill based on 
 2. **Adding payment buttons or forms** → `recur-checkout`
 3. **Receiving payment notifications** → `recur-webhooks`
 4. **Checking subscription status / Paywalls** → `recur-entitlements`
-5. **Not sure what's available** → `recur-help`
+5. **Customer self-service / Account management** → `recur-portal`
+6. **Not sure what's available** → `recur-help`
 
 ## Integration Context
 

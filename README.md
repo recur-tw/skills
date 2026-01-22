@@ -81,6 +81,17 @@ Implement access control and permission checking.
 - Paywall components
 - Server-side verification
 
+### recur-portal
+
+Implement Customer Portal for subscription self-service.
+
+**Triggers:** "customer portal", "帳戶管理", "訂閱管理", "更新付款方式", "self-service"
+
+- Create portal sessions
+- Portal button component
+- Next.js API routes and server actions
+- Account management pages
+
 ## Usage
 
 Once installed, Claude will automatically use these skills when you're working on Recur integration tasks.

@@ -37,6 +37,12 @@ metadata:
 - 說：「檢查付費權限」「paywall」「權限檢查」「entitlements」
 - 或輸入：`/recur-entitlements`
 
+### 5. recur-portal
+**用途**：實作客戶自助入口（管理訂閱、更新付款方式）
+**觸發方式**：
+- 說：「加上帳戶管理」「customer portal」「訂閱管理」「更新付款方式」
+- 或輸入：`/recur-portal`
+
 ## 回覆格式
 
 用繁體中文回覆，格式如下：
@@ -52,6 +58,7 @@ metadata:
 | **checkout** | 結帳流程 | 說「加上結帳按鈕」 |
 | **webhooks** | 付款通知 | 說「設定 webhook」 |
 | **entitlements** | 權限檢查 | 說「檢查付費權限」 |
+| **portal** | 客戶自助入口 | 說「加上帳戶管理」 |
 
 💡 **建議從 quickstart 開始**，它會引導你完成 SDK 安裝和基本設定。
 
