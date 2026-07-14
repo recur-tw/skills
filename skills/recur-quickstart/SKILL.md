@@ -4,7 +4,7 @@ description: Quick setup guide for Recur payment integration. Use when starting 
 license: MIT
 metadata:
   author: recur
-  version: "0.0.7"
+  version: "0.0.8"
 ---
 
 # Recur Quickstart

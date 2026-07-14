@@ -4,7 +4,7 @@ description: Set up and handle Recur webhook events for payment notifications. U
 license: MIT
 metadata:
   author: recur
-  version: "0.0.7"
+  version: "0.0.8"
 ---
 
 # Recur Webhook Integration
