@@ -4,7 +4,8 @@ description: Set up and handle Recur webhook events for payment notifications. U
 license: MIT
 metadata:
   author: recur
-  version: "0.0.7"
+  version: "0.0.8"
+  verified-against: recur-tw@0.16.1
 ---
 
 # Recur Webhook Integration
@@ -19,164 +20,95 @@ You are helping implement Recur webhooks to receive real-time payment and subscr
 |-------|------------|
 | `checkout.completed` | Payment successful, subscription/order created |
 | `subscription.activated` | Subscription is now active |
-| `subscription.cancelled` | Subscription was cancelled |
-| `subscription.renewed` | Recurring payment successful |
-| `subscription.past_due` | Payment failed, subscription at risk |
+| `subscription.cancelled` | Subscription was cancelled (access continues until period end) |
+| `invoice.paid` | Recurring payment succeeded (renewal) |
+| `subscription.payment_failed` | Payment failed, subscription at risk |
 | `order.paid` | One-time purchase completed |
-| `refund.created` | Refund initiated |
+| `invoice.refunded` | Invoice was refunded |
 
 ### All Supported Events
 
+From the SDK's `WebhookEventType` (unknown future types are also allowed):
+
 ```typescript
-type WebhookEventType =
-  // Checkout
-  | 'checkout.created'
-  | 'checkout.completed'
-  // Orders
-  | 'order.paid'
-  | 'order.payment_failed'
-  // Subscription Lifecycle
-  | 'subscription.created'
-  | 'subscription.activated'
-  | 'subscription.cancelled'
-  | 'subscription.expired'
-  | 'subscription.trial_ending'
-  // Subscription Changes
-  | 'subscription.upgraded'
-  | 'subscription.downgraded'
-  | 'subscription.renewed'
-  | 'subscription.past_due'
-  // Scheduled Changes
-  | 'subscription.schedule_created'
-  | 'subscription.schedule_executed'
-  | 'subscription.schedule_cancelled'
+import type { WebhookEventType } from 'recur-tw/server'
+
+const knownEvents: WebhookEventType[] = [
+  // Checkout & orders
+  'checkout.completed',
+  'order.paid',
+  // Subscription lifecycle
+  'subscription.created',
+  'subscription.activated',
+  'subscription.updated',
+  'subscription.cancelled',
+  'subscription.revoked',
+  'subscription.expired',
+  'subscription.trial_ending',
+  'subscription.payment_failed',
   // Invoices
-  | 'invoice.created'
-  | 'invoice.paid'
-  | 'invoice.payment_failed'
+  'invoice.created',
+  'invoice.paid',
+  'invoice.payment_failed',
+  'invoice.refunded',
   // Customer
-  | 'customer.created'
-  | 'customer.updated'
-  // Product
-  | 'product.created'
-  | 'product.updated'
-  // Refunds
-  | 'refund.created'
-  | 'refund.succeeded'
-  | 'refund.failed'
+  'customer.created',
+  'customer.updated',
+]
 ```
 
 ## Webhook Handler Implementation
+
+Use the server SDK's `recur.webhooks.verify()` — it verifies the HMAC-SHA256
+signature (timing-safe) and returns the parsed event, or throws
+`WebhookSignatureVerificationError`.
 
 ### Next.js App Router
 
 ```typescript
 // app/api/webhooks/recur/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
+import { Recur } from 'recur-tw/server'
 
-const WEBHOOK_SECRET = process.env.RECUR_WEBHOOK_SECRET!
-
-function verifySignature(payload: string, signature: string): boolean {
-  const expected = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
-    .update(payload)
-    .digest('hex')
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  )
-}
+const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
 export async function POST(request: NextRequest) {
+  // Signature verification needs the RAW body — read text() before parsing.
   const payload = await request.text()
   const signature = request.headers.get('x-recur-signature')
 
-  // Verify signature
-  if (!signature || !verifySignature(payload, signature)) {
+  let event
+  try {
+    event = recur.webhooks.verify(payload, signature, process.env.RECUR_WEBHOOK_SECRET!)
+  } catch {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  const event = JSON.parse(payload)
-
-  // Handle events
   switch (event.type) {
     case 'checkout.completed':
-      await handleCheckoutCompleted(event.data)
+      // Payment successful — send welcome email, track conversion
       break
-
     case 'subscription.activated':
-      await handleSubscriptionActivated(event.data)
+      // Provision resources for the new subscriber
       break
-
+    case 'invoice.paid':
+      // Renewal succeeded — extend quotas, update billing records
+      break
+    case 'subscription.payment_failed':
+      // Dunning: notify the user; entitlement enters grace period
+      break
     case 'subscription.cancelled':
-      await handleSubscriptionCancelled(event.data)
+      // Access continues until period end — confirmation email
       break
-
-    case 'subscription.renewed':
-      await handleSubscriptionRenewed(event.data)
+    case 'subscription.expired':
+    case 'subscription.revoked':
+      // Access fully ended — clean up
       break
-
-    case 'subscription.past_due':
-      await handleSubscriptionPastDue(event.data)
-      break
-
-    case 'refund.created':
-      await handleRefundCreated(event.data)
-      break
-
     default:
       console.log(`Unhandled event type: ${event.type}`)
   }
 
   return NextResponse.json({ received: true })
-}
-
-// Event handlers
-async function handleCheckoutCompleted(data: any) {
-  const { customerId, subscriptionId, orderId, productId, amount } = data
-
-  // Update your database
-  // Grant access to the user
-  // Send confirmation email
-}
-
-async function handleSubscriptionActivated(data: any) {
-  const { subscriptionId, customerId, productId, status } = data
-
-  // Update user's subscription status in your database
-  // Enable premium features
-}
-
-async function handleSubscriptionCancelled(data: any) {
-  const { subscriptionId, customerId, cancelledAt, accessUntil } = data
-
-  // Mark subscription as cancelled
-  // User still has access until accessUntil date
-  // Send cancellation confirmation email
-}
-
-async function handleSubscriptionRenewed(data: any) {
-  const { subscriptionId, customerId, amount, nextBillingDate } = data
-
-  // Update billing records
-  // Extend access period
-}
-
-async function handleSubscriptionPastDue(data: any) {
-  const { subscriptionId, customerId, failureReason } = data
-
-  // Notify user of payment failure
-  // Consider sending dunning emails
-  // May want to restrict access after grace period
-}
-
-async function handleRefundCreated(data: any) {
-  const { refundId, orderId, amount, reason } = data
-
-  // Update order status
-  // Adjust user credits/access
-  // Send refund notification
 }
 ```
 
@@ -184,58 +116,69 @@ async function handleRefundCreated(data: any) {
 
 ```typescript
 import express from 'express'
-import crypto from 'crypto'
+import { Recur, WebhookSignatureVerificationError } from 'recur-tw/server'
 
 const app = express()
+const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
-// Important: Use raw body for signature verification
+// Important: use the raw body for signature verification
 app.post(
   '/api/webhooks/recur',
   express.raw({ type: 'application/json' }),
   (req, res) => {
-    const payload = req.body.toString()
-    const signature = req.headers['x-recur-signature'] as string
-
-    // Verify signature
-    const expected = crypto
-      .createHmac('sha256', process.env.RECUR_WEBHOOK_SECRET!)
-      .update(payload)
-      .digest('hex')
-
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-      return res.status(401).json({ error: 'Invalid signature' })
+    try {
+      const event = recur.webhooks.verify(
+        req.body.toString(),
+        req.headers['x-recur-signature'] as string,
+        process.env.RECUR_WEBHOOK_SECRET!,
+      )
+      console.log('Received event:', event.type)
+      res.json({ received: true })
+    } catch (err) {
+      if (err instanceof WebhookSignatureVerificationError) {
+        res.status(401).json({ error: 'Invalid signature' })
+        return
+      }
+      throw err
     }
-
-    const event = JSON.parse(payload)
-
-    // Handle event...
-    console.log('Received event:', event.type)
-
-    res.json({ received: true })
   }
 )
+```
+
+### Manual verification (non-SDK environments)
+
+The signature is `HMAC-SHA256(payload, webhookSecret)` hex-encoded, sent in
+the `x-recur-signature` header. Compare with a timing-safe comparison:
+
+```typescript
+import crypto from 'crypto'
+
+function verifySignature(payload: string, signature: string, secret: string): boolean {
+  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex')
+  const a = Buffer.from(signature)
+  const b = Buffer.from(expected)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
 ```
 
 ## Event Payload Structure
 
 ```typescript
-interface WebhookEvent {
-  id: string           // Event ID (for idempotency)
-  type: string         // Event type
-  timestamp: string    // ISO 8601 timestamp
-  data: {
-    // Varies by event type
-    customerId?: string
-    customerEmail?: string
-    subscriptionId?: string
-    orderId?: string
-    productId?: string
-    amount?: number
-    currency?: string
-    // ... more fields depending on event
+import type { WebhookEvent } from 'recur-tw/server'
+
+function describe(event: WebhookEvent) {
+  return {
+    id: event.id,               // Unique event ID — use for idempotency
+    type: event.type,           // Event type
+    timestamp: event.timestamp, // ISO 8601
+    data: event.data,           // Record<string, unknown>, varies by type
   }
 }
 ```
+
+`data` typically contains identifiers such as `customerId`, `customerEmail`,
+`subscriptionId`, `orderId`, `productId`, and amounts in the smallest
+currency unit.
 
 ## Webhook Configuration
 
@@ -247,104 +190,64 @@ interface WebhookEvent {
 
 ## Testing Webhooks Locally
 
-### Using ngrok
-
 ```bash
-# Start ngrok tunnel
+# Start an ngrok tunnel and use the URL in the Recur dashboard
 ngrok http 3000
-
-# Use the ngrok URL in Recur dashboard
 # https://xxxx.ngrok.io/api/webhooks/recur
-```
 
-### Using Recur CLI (if available)
-
-```bash
-# Forward webhooks to local server
-recur webhooks forward --to localhost:3000/api/webhooks/recur
+# Or send a signed test event to your local endpoint
+./scripts/test-webhook.sh http://localhost:3000/api/webhooks/recur checkout.completed
 ```
 
 ## Best Practices
 
 ### 1. Always Verify Signatures
 
-Never trust webhook payloads without verifying the signature.
+Never trust webhook payloads without verification. Pass the **raw request
+body** to `verify()` — re-serializing parsed JSON breaks the signature.
 
 ### 2. Handle Idempotency
 
-Webhooks may be delivered multiple times. Use the event `id` to deduplicate:
+Webhooks may be delivered more than once. Deduplicate by `event.id`:
 
 ```typescript
-async function handleEvent(event: WebhookEvent) {
-  // Check if already processed
-  const existing = await db.webhookEvent.findUnique({
-    where: { eventId: event.id }
-  })
+import type { WebhookEvent } from 'recur-tw/server'
 
-  if (existing) {
+// Swap for your database or KV store in production.
+const processed = new Set<string>()
+
+async function handleEventOnce(event: WebhookEvent, handle: () => Promise<void>) {
+  if (processed.has(event.id)) {
     console.log('Event already processed:', event.id)
     return
   }
-
-  // Process event...
-
-  // Mark as processed
-  await db.webhookEvent.create({
-    data: { eventId: event.id, processedAt: new Date() }
-  })
+  await handle()
+  processed.add(event.id)
 }
 ```
 
 ### 3. Return 200 Quickly
 
-Process events asynchronously to avoid timeouts:
+Recur retries on failures/timeouts. Do heavy work asynchronously (queue) and
+respond immediately.
 
-```typescript
-export async function POST(request: NextRequest) {
-  // Verify and parse...
+### 4. You Usually Don't Need to Mirror State
 
-  // Queue for async processing
-  await queue.add('process-webhook', event)
-
-  // Return immediately
-  return NextResponse.json({ received: true })
-}
-```
-
-### 4. Handle Retries Gracefully
-
-Recur retries failed webhook deliveries. Ensure your handler is idempotent.
-
-### 5. Log Everything
-
-```typescript
-console.log('Webhook received:', {
-  type: event.type,
-  id: event.id,
-  timestamp: event.timestamp,
-})
-```
+For access control, prefer checking entitlements live
+(`recur.entitlements.check()`) over rebuilding subscription state from
+events — use webhooks for side effects (emails, provisioning, analytics).
 
 ## Debugging Webhooks
 
-### Check Webhook Logs
+Recur Dashboard → Webhooks → click endpoint → delivery logs.
 
-In Recur Dashboard → Webhooks → Click endpoint → View delivery logs
+**401 Unauthorized** — wrong secret, or body was parsed before verification
+(must use raw body).
 
-### Common Issues
+**Timeout (no response)** — return 200 before heavy processing.
 
-**401 Unauthorized**
-- Check webhook secret is correct
-- Ensure using raw body for signature verification
-- Verify signature algorithm (HMAC SHA-256)
-
-**Timeout (no response)**
-- Return 200 before processing
-- Use async processing for heavy operations
-
-**Missing events**
-- Check event types are selected in dashboard
-- Verify endpoint URL is correct and accessible
+**Missing events** — check event types are selected in the dashboard and the
+endpoint URL is reachable.
 
 ## Related Skills
 

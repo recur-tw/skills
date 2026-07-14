@@ -4,12 +4,27 @@ description: Quick setup guide for Recur payment integration. Use when starting 
 license: MIT
 metadata:
   author: recur
-  version: "0.0.7"
+  version: "0.0.8"
+  verified-against: recur-tw@0.16.1
 ---
 
 # Recur Quickstart
 
 You are helping a developer integrate Recur, Taiwan's subscription payment platform (similar to Stripe Billing).
+
+## Fastest Path: Start from a Template
+
+For a **new project**, don't wire Recur by hand — scaffold a template with
+everything pre-integrated (checkout, webhooks, entitlements gate, customer
+portal):
+
+```bash
+npm create recur-tw@latest my-app -- --template saas
+# or browse templates: https://github.com/recur-tw/templates
+```
+
+Then follow the template's `AGENTS.md` to customize. The steps below are for
+integrating Recur into an **existing** app.
 
 ## Step 1: Install SDK
 
@@ -30,7 +45,7 @@ API keys are available in the Recur dashboard at `app.recur.tw` → Settings →
 
 **Environment variables to set:**
 ```bash
-RECUR_PUBLISHABLE_KEY=pk_test_xxx
+NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY=pk_test_xxx
 RECUR_SECRET_KEY=sk_test_xxx
 ```
 
@@ -39,9 +54,11 @@ RECUR_SECRET_KEY=sk_test_xxx
 Wrap your app with `RecurProvider`:
 
 ```tsx
+'use client'
+
 import { RecurProvider } from 'recur-tw'
 
-export default function App({ children }) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <RecurProvider
       config={{
@@ -56,39 +73,51 @@ export default function App({ children }) {
 
 ## Step 4: Create Your First Checkout
 
+Use **Hosted Checkout** (`redirectToCheckout`) — it works on any domain
+including localhost. (The on-page `checkout()` requires a domain registered
+with Recur; see `/recur-checkout`.)
+
 ```tsx
+'use client'
+
 import { useRecur } from 'recur-tw'
 
-function PricingButton({ productId }: { productId: string }) {
-  const { checkout } = useRecur()
+export function PricingButton({ productId }: { productId: string }) {
+  const { redirectToCheckout, isCheckingOut } = useRecur()
 
   const handleCheckout = async () => {
-    await checkout({
+    await redirectToCheckout({
       productId,
-      onPaymentComplete: (subscription) => {
-        console.log('Payment successful!', subscription)
-      },
-      onPaymentFailed: (error) => {
-        console.error('Payment failed:', error)
-      },
+      successUrl: `${window.location.origin}/success`,
+      cancelUrl: `${window.location.origin}/pricing`,
     })
   }
 
-  return <button onClick={handleCheckout}>Subscribe</button>
+  return (
+    <button onClick={handleCheckout} disabled={isCheckingOut}>
+      {isCheckingOut ? '處理中…' : 'Subscribe'}
+    </button>
+  )
 }
 ```
 
 ## Step 5: Set Up Webhooks
 
-Create a webhook endpoint to receive payment notifications. See the `recur-webhooks` skill for detailed instructions.
+Create a webhook endpoint to receive payment notifications. See the
+`/recur-webhooks` skill — the server SDK's `recur.webhooks.verify()` handles
+signature verification for you.
 
 ## Quick Verification Checklist
 
 - [ ] SDK installed (`pnpm list recur-tw`)
 - [ ] Environment variables set
 - [ ] RecurProvider wrapping app
-- [ ] Test checkout works in sandbox
+- [ ] Test checkout works in sandbox (test cards below)
 - [ ] Webhook endpoint configured
+
+**PAYUNi 測試卡號** (sandbox):
+- VISA:`4147-6310-0000-0001`,JCB:`3560-5110-0000-0001`
+- 到期日:任意未來日期;CVV:任意三碼
 
 ## Common Issues
 
@@ -100,6 +129,10 @@ Create a webhook endpoint to receive payment notifications. See the `recur-webho
 - Verify product exists in Recur dashboard
 - Check you're using correct environment (sandbox vs production)
 
+### Checkout fails on localhost
+- The on-page `checkout()` (embedded/modal) only works on registered
+  domains — use `redirectToCheckout()` during local development
+
 ### Checkout not appearing
 - Ensure `RecurProvider` wraps your app
 - Check browser console for errors
@@ -107,12 +140,13 @@ Create a webhook endpoint to receive payment notifications. See the `recur-webho
 
 ## Next Steps
 
-- `/recur-checkout` - Learn checkout flow options
+- `/recur-checkout` - Checkout flow options (hosted / embedded / payment links)
 - `/recur-webhooks` - Set up payment notifications
 - `/recur-entitlements` - Implement access control
+- `/recur-portal` - Customer self-service portal
 
 ## Resources
 
 - [Recur Documentation](https://recur.tw/docs)
 - [SDK on npm](https://www.npmjs.com/package/recur-tw)
-- [API Reference](https://recur.tw/docs/api)
+- [Templates](https://github.com/recur-tw/templates)

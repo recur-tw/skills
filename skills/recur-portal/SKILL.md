@@ -4,7 +4,8 @@ description: Implement Customer Portal for subscription self-service. Use when b
 license: MIT
 metadata:
   author: recur
-  version: "0.0.7"
+  version: "0.0.8"
+  verified-against: recur-tw@0.16.1
 ---
 
 # Recur Customer Portal Integration
@@ -30,47 +31,23 @@ Customer Portal is a hosted page where your customers can:
 
 ## Quick Start: Create Portal Session
 
-Portal sessions are created server-side (requires Secret Key).
-
-### Using Server SDK
+Portal sessions are created server-side (requires Secret Key). Identify the
+customer by `customer` (Recur ID, highest priority), `externalId`, or
+`email` (lowest priority).
 
 ```typescript
 import { Recur } from 'recur-tw/server'
 
 const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
-// Create portal session - identify customer by email, ID, or externalId
-const session = await recur.portal.sessions.create({
-  email: 'customer@example.com',  // or customer: 'cus_xxx' or externalId: 'user_123'
-  returnUrl: 'https://yourapp.com/account',
-})
-
-// Redirect customer to portal
-redirect(session.url)
-```
-
-### Customer Identification
-
-You can identify customers using one of these methods (in priority order):
-
-```typescript
-// By Recur customer ID (highest priority)
-await recur.portal.sessions.create({
-  customer: 'cus_xxx',
-  returnUrl: 'https://yourapp.com/account',
-})
-
-// By your system's user ID
-await recur.portal.sessions.create({
-  externalId: 'user_123',
-  returnUrl: 'https://yourapp.com/account',
-})
-
-// By email (lowest priority)
-await recur.portal.sessions.create({
-  email: 'customer@example.com',
-  returnUrl: 'https://yourapp.com/account',
-})
+export async function createPortalUrl(email: string) {
+  const session = await recur.portal.sessions.create({
+    email, // or customer: 'cus_xxx' / externalId: 'user_123'
+    returnUrl: 'https://yourapp.com/account',
+    locale: 'zh-TW', // or 'en'
+  })
+  return session.url // redirect the customer here
+}
 ```
 
 ## Next.js Implementation
@@ -79,9 +56,9 @@ await recur.portal.sessions.create({
 
 ```typescript
 // app/api/portal/route.ts
-import { Recur } from 'recur-tw/server'
-import { auth } from '@/lib/auth'  // Your auth solution
 import { NextResponse } from 'next/server'
+import { Recur, RecurAPIError } from 'recur-tw/server'
+import { auth } from '@/lib/auth' // your auth solution
 
 const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
@@ -96,15 +73,17 @@ export async function POST() {
     const portalSession = await recur.portal.sessions.create({
       email: session.user.email,
       returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/account`,
+      locale: 'zh-TW',
     })
 
     return NextResponse.json({ url: portalSession.url })
   } catch (error) {
+    if (error instanceof RecurAPIError && error.statusCode === 404) {
+      // Customer doesn't exist in Recur — they haven't purchased yet
+      return NextResponse.json({ error: 'no_customer' }, { status: 404 })
+    }
     console.error('Portal session error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create portal session' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 })
   }
 }
 ```
@@ -131,6 +110,7 @@ export async function openPortal() {
   const portalSession = await recur.portal.sessions.create({
     email: session.user.email,
     returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/account`,
+    locale: 'zh-TW',
   })
 
   redirect(portalSession.url)
@@ -147,45 +127,36 @@ import { useState } from 'react'
 
 export function PortalButton() {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleClick = async () => {
     setIsLoading(true)
+    setError(null)
     try {
       const response = await fetch('/api/portal', { method: 'POST' })
-      const { url, error } = await response.json()
+      const data = await response.json()
 
-      if (error) throw new Error(error)
+      if (data.error === 'no_customer') {
+        window.location.href = '/pricing' // nothing to manage yet
+        return
+      }
+      if (!response.ok || !data.url) throw new Error(data.error)
 
-      window.location.href = url
-    } catch (error) {
-      console.error('Failed to open portal:', error)
-      alert('無法開啟帳戶管理頁面，請稍後再試')
-    } finally {
+      window.location.href = data.url
+    } catch (err) {
+      console.error('Failed to open portal:', err)
+      setError('無法開啟帳戶管理頁面,請稍後再試')
       setIsLoading(false)
     }
   }
 
   return (
-    <button onClick={handleClick} disabled={isLoading}>
-      {isLoading ? '載入中...' : '管理訂閱'}
-    </button>
-  )
-}
-```
-
-### Using Server Action with Button
-
-```tsx
-// components/portal-button-action.tsx
-'use client'
-
-import { openPortal } from '@/app/actions/portal'
-
-export function PortalButton() {
-  return (
-    <form action={openPortal}>
-      <button type="submit">管理訂閱</button>
-    </form>
+    <div>
+      <button onClick={handleClick} disabled={isLoading}>
+        {isLoading ? '載入中...' : '管理訂閱'}
+      </button>
+      {error && <p>{error}</p>}
+    </div>
   )
 }
 ```
@@ -193,85 +164,52 @@ export function PortalButton() {
 ## Portal Session Response
 
 ```typescript
-interface PortalSession {
-  id: string              // Session ID (e.g., 'portal_sess_xxx')
-  object: 'portal.session'
-  url: string             // URL to redirect customer to
-  customer: string        // Customer ID
-  returnUrl: string       // URL to return after portal exit
-  status: 'active' | 'expired'
-  expiresAt: string       // ISO 8601 (sessions last 1 hour)
-  accessedAt: string | null
-  createdAt: string
+import type { PortalSession } from 'recur-tw/server'
+
+function describe(session: PortalSession) {
+  return {
+    id: session.id,                 // 'portal_sess_xxx'
+    url: session.url,               // redirect customer here
+    customer: session.customer,     // Recur customer ID
+    returnUrl: session.returnUrl,
+    status: session.status,         // 'active' | 'expired'
+    expiresAt: session.expiresAt,   // sessions last 1 hour
+    accessedAt: session.accessedAt, // null until first opened
+    createdAt: session.createdAt,
+  }
 }
-```
-
-## Using REST API Directly
-
-If not using the SDK:
-
-```typescript
-const response = await fetch('https://api.recur.tw/v1/portal/sessions', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${process.env.RECUR_SECRET_KEY}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    email: 'customer@example.com',
-    return_url: 'https://yourapp.com/account',
-  }),
-})
-
-const { url } = await response.json()
-// Redirect to url
 ```
 
 ## Common Patterns
 
-### Account Page with Portal Link
+### Account page with conditional portal access
+
+Only show the portal button when the user actually has something to manage:
 
 ```tsx
-// app/account/page.tsx
+// app/account/page.tsx (server component)
+import { Recur } from 'recur-tw/server'
 import { auth } from '@/lib/auth'
 import { PortalButton } from '@/components/portal-button'
 
+const recur = new Recur(process.env.RECUR_SECRET_KEY!)
+
 export default async function AccountPage() {
   const session = await auth()
+  const email = session?.user?.email
+  if (!email) return <a href="/login">請先登入</a>
+
+  const { entitlements } = await recur.entitlements.list({ customer: { email } })
 
   return (
     <div>
       <h1>帳戶設定</h1>
-      <p>Email: {session?.user?.email}</p>
-
-      <section>
-        <h2>訂閱管理</h2>
-        <p>管理您的訂閱、更新付款方式、查看帳單記錄</p>
+      <p>Email: {email}</p>
+      {entitlements.length > 0 ? (
         <PortalButton />
-      </section>
-    </div>
-  )
-}
-```
-
-### Conditional Portal Access
-
-```tsx
-// Only show portal button if user has subscription
-function SubscriptionSection({ hasSubscription }: { hasSubscription: boolean }) {
-  if (!hasSubscription) {
-    return (
-      <div>
-        <p>您目前沒有訂閱</p>
+      ) : (
         <a href="/pricing">查看方案</a>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <p>您目前的訂閱：Pro 方案</p>
-      <PortalButton />
+      )}
     </div>
   )
 }
@@ -287,35 +225,11 @@ Configure portal behavior in Recur Dashboard → Settings → Customer Portal:
 
 ## Security Notes
 
-1. **Server-side only**: Portal sessions require Secret Key (sk_xxx)
+1. **Server-side only**: Portal sessions require the Secret Key (`sk_xxx`)
 2. **Short-lived**: Sessions expire in 1 hour
 3. **One-time use**: Each session URL should only be used once
-4. **Verify user**: Always authenticate the user before creating a portal session
-
-## Error Handling
-
-```typescript
-try {
-  const session = await recur.portal.sessions.create({
-    email: userEmail,
-    returnUrl: returnUrl,
-  })
-  redirect(session.url)
-} catch (error) {
-  if (error.code === 'customer_not_found') {
-    // Customer doesn't exist in Recur
-    // Maybe they haven't subscribed yet
-    redirect('/pricing')
-  }
-
-  if (error.code === 'missing_return_url') {
-    // returnUrl is required
-    console.error('Missing return URL')
-  }
-
-  throw error
-}
-```
+4. **Verify the user**: Always authenticate before creating a portal session
+   — never accept an arbitrary email from the client
 
 ## Related Skills
 

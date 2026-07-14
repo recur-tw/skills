@@ -4,7 +4,7 @@ description: List all available Recur skills and how to use them. Use when user 
 license: MIT
 metadata:
   author: recur
-  version: "0.0.7"
+  version: "0.0.8"
 ---
 
 # Recur Skills 使用指南
@@ -20,7 +20,7 @@ metadata:
 - 或輸入：`/recur-quickstart`
 
 ### 2. recur-checkout
-**用途**：實作結帳流程（embedded、modal、redirect）
+**用途**：實作結帳流程（hosted、embedded、modal、payment links）
 **觸發方式**：
 - 說：「加上結帳按鈕」「checkout」「付款按鈕」「embedded checkout」
 - 或輸入：`/recur-checkout`
@@ -43,6 +43,17 @@ metadata:
 - 說：「加上帳戶管理」「customer portal」「訂閱管理」「更新付款方式」
 - 或輸入：`/recur-portal`
 
+## 全新專案?建議從模板開始
+
+如果用戶是從零開始建立訂閱制服務，優先推薦官方模板（已完整串接
+checkout、webhooks、entitlements、portal）：
+
+```bash
+npm create recur-tw@latest my-app -- --template saas
+```
+
+模板目錄：https://github.com/recur-tw/templates
+
 ## 回覆格式
 
 用繁體中文回覆，格式如下：
@@ -60,7 +71,8 @@ metadata:
 | **entitlements** | 權限檢查 | 說「檢查付費權限」 |
 | **portal** | 客戶自助入口 | 說「加上帳戶管理」 |
 
-💡 **建議從 quickstart 開始**，它會引導你完成 SDK 安裝和基本設定。
+💡 **全新專案**建議直接用 `npm create recur-tw@latest` 從模板開始;
+**既有專案**從 quickstart 開始，它會引導你完成 SDK 安裝和基本設定。
 
 有什麼想做的嗎？
 ```
