@@ -1,17 +1,20 @@
 import { program } from 'commander'
 import pc from 'picocolors'
-import { existsSync, mkdirSync, cpSync, readdirSync } from 'node:fs'
+import { existsSync, mkdirSync, cpSync, readdirSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getAllSkills, getSkill, getSkillsDir } from './index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SKILLS_SOURCE = join(__dirname, '..', 'skills')
+const { version } = JSON.parse(
+  readFileSync(join(__dirname, '..', 'package.json'), 'utf8')
+) as { version: string }
 
 program
   .name('recur-skills')
   .description('Claude Code skills for Recur payment integration')
-  .version('0.0.1')
+  .version(version)
 
 program
   .command('list')
