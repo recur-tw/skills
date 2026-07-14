@@ -15,19 +15,17 @@ skills/
 ├── package.json           # npm package config
 ├── .claude-plugin/
 │   └── marketplace.json   # Claude Code plugin registry
-├── scripts/
-│   ├── sync-version.js         # Sync version to marketplace + SKILL.md
-│   └── typecheck-examples.mjs  # Drift guard: typecheck SKILL.md examples
-├── src/                   # recur-skills CLI (list / info / install)
 └── skills/
     ├── recur-help/
+    │   └── SKILL.md
     ├── recur-quickstart/
-    │   └── scripts/check-env.sh
+    │   └── SKILL.md
     ├── recur-checkout/
+    │   └── SKILL.md
     ├── recur-webhooks/
-    │   └── scripts/{test-webhook.sh, verify-signature.ts}
-    ├── recur-entitlements/
-    └── recur-portal/
+    │   └── SKILL.md
+    └── recur-entitlements/
+        └── SKILL.md
 ```
 
 ## Available Skills
@@ -45,14 +43,12 @@ skills/
 
 When a user asks about Recur integration, select the appropriate skill based on their task:
 
-1. **Brand-new project** → recommend a template first:
-   `npm create recur-tw@latest` ([recur-tw/templates](https://github.com/recur-tw/templates))
-2. **New integration in an existing app** → `recur-quickstart`
-3. **Adding payment buttons or forms** → `recur-checkout`
-4. **Receiving payment notifications** → `recur-webhooks`
-5. **Checking subscription status / Paywalls** → `recur-entitlements`
-6. **Customer self-service / Account management** → `recur-portal`
-7. **Not sure what's available** → `recur-help`
+1. **New integration / Getting started** → `recur-quickstart`
+2. **Adding payment buttons or forms** → `recur-checkout`
+3. **Receiving payment notifications** → `recur-webhooks`
+4. **Checking subscription status / Paywalls** → `recur-entitlements`
+5. **Customer self-service / Account management** → `recur-portal`
+6. **Not sure what's available** → `recur-help`
 
 ## Integration Context
 
@@ -66,11 +62,9 @@ pnpm add recur-tw
 
 Key exports:
 - `RecurProvider` - React context provider
-- `useRecur` - Checkout hook (`redirectToCheckout`, `checkout`, `isCheckingOut`)
-- `useProducts` - Product listing (returns `{ data, isLoading }`)
-- `useCustomer` - Entitlements hook (`check`, `refetch`, `entitlements`)
+- `useRecur` - Checkout hook
+- `useCustomer` - Entitlements hook
 - `Recur` (from `recur-tw/server`) - Server-side SDK
-  (`entitlements`, `portal`, `webhooks`, `paymentLinks`)
 
 ### Environment Variables
 
@@ -91,15 +85,10 @@ import { RecurProvider } from 'recur-tw'
 </RecurProvider>
 ```
 
-**Checkout Flow** — default to Hosted Checkout; the on-page `checkout()`
-requires a domain registered with Recur and does NOT work on localhost:
+**Checkout Flow**
 ```tsx
-const { redirectToCheckout } = useRecur()
-await redirectToCheckout({
-  productId: 'prod_xxx',
-  successUrl: `${window.location.origin}/success`,
-  cancelUrl: `${window.location.origin}/pricing`,
-})
+const { checkout } = useRecur()
+await checkout({ productId: 'prod_xxx', mode: 'modal' })
 ```
 
 **Entitlement Check**
@@ -129,8 +118,7 @@ description: Clear description with trigger keywords...
 license: MIT
 metadata:
   author: recur
-  version: "0.0.8"
-  verified-against: recur-tw@0.16.1
+  version: "0.0.5"
 ---
 ```
 
@@ -139,16 +127,6 @@ metadata:
 - Include working code examples
 - Show both basic and advanced patterns
 - Reference related skills at the end
-
-**Source of truth policy (important)**:
-- The installed SDK's type definitions
-  (`node_modules/recur-tw/dist/{index,server}.d.ts`) are the ONLY source of
-  truth for API shapes. Never write examples from memory or from older docs.
-- Every ts/tsx fenced block in SKILL.md is typechecked against the real SDK
-  by `pnpm check:examples`. Blocks must be self-contained (include imports);
-  mark intentional fragments with ```` ```tsx no-check ````.
-- Run `pnpm check:examples` before every release. When bumping the pinned
-  `recur-tw` devDependency, update each skill's `verified-against` metadata.
 
 ## Testing Integration
 
@@ -166,5 +144,4 @@ Users can test their integration using:
 
 - [Recur Documentation](https://recur.tw/docs)
 - [SDK on npm](https://www.npmjs.com/package/recur-tw)
-- [Templates](https://github.com/recur-tw/templates) - `npm create recur-tw@latest`
 - [MCP Server](https://mcp.recur.tw) - For account management via AI

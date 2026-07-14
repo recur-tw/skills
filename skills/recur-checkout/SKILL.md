@@ -1,112 +1,54 @@
 ---
 name: recur-checkout
-description: Implement Recur checkout flows including hosted, embedded, and modal modes. Use when adding payment buttons, checkout forms, subscription purchase flows, or when user mentions "checkout", "結帳", "付款按鈕", "embedded checkout".
+description: Implement Recur checkout flows including embedded, modal, and redirect modes. Use when adding payment buttons, checkout forms, subscription purchase flows, or when user mentions "checkout", "結帳", "付款按鈕", "embedded checkout".
 license: MIT
 metadata:
   author: recur
-  version: "0.0.8"
-  verified-against: recur-tw@0.16.1
+  version: "0.0.7"
 ---
 
 # Recur Checkout Integration
 
 You are helping implement Recur checkout flows. Recur supports multiple checkout modes for different use cases.
 
-## Choosing a Checkout Mode
+## Checkout Modes
 
-| Mode | API | Works on localhost | Best for |
-|------|-----|--------------------|----------|
-| **Hosted Checkout** (recommended) | `redirectToCheckout()` | ✅ Yes | Most apps — simplest, works on any domain |
-| On-page (embedded/modal) | `checkout()` | ❌ No — requires a registered domain | Polished production UX on your own domain |
-| Payment Link | `recur.paymentLinks.create()` (server) | ✅ Yes | No-frontend flows: emails, DMs, invoices |
+| Mode | Best For | User Experience |
+|------|----------|-----------------|
+| `embedded` | SPA apps | Form renders inline in your page |
+| `modal` | Quick purchases | Form appears in a dialog overlay |
+| `redirect` | Simple integration | Full page redirect to Recur |
 
-**Default to Hosted Checkout.** The on-page `checkout()` renders the card
-form via the PAYUNi SDK and only works on domains registered with Recur —
-it will fail during local development.
+## Basic Implementation
 
-## Hosted Checkout (recommended)
-
-Redirects to `checkout.recur.tw`; the customer pays and is redirected back
-to your `successUrl`.
+### Using useRecur Hook
 
 ```tsx
-'use client'
-
 import { useRecur } from 'recur-tw'
 
-export function SubscribeButton({ productId }: { productId: string }) {
-  const { redirectToCheckout, isCheckingOut } = useRecur()
-
-  const handleClick = async () => {
-    await redirectToCheckout({
-      productId, // or productSlug: 'pro-plan'
-      successUrl: `${window.location.origin}/dashboard?welcome=1`,
-      cancelUrl: `${window.location.origin}/pricing`,
-      // Optional: pre-fill and link to your user system
-      customerEmail: 'user@example.com',
-      externalCustomerId: 'user_123',
-    })
-  }
-
-  return (
-    <button onClick={handleClick} disabled={isCheckingOut}>
-      {isCheckingOut ? '處理中…' : '訂閱'}
-    </button>
-  )
-}
-```
-
-There are no client-side success callbacks in this mode — handle success on
-the `successUrl` page (and authoritatively via webhooks / entitlements).
-
-To control the redirect yourself (e.g. open in a new tab):
-
-```tsx
-'use client'
-
-import { useRecur } from 'recur-tw'
-
-export function OpenCheckoutInNewTab({ productId }: { productId: string }) {
-  const { createCheckoutSession } = useRecur()
-
-  const handleClick = async () => {
-    const session = await createCheckoutSession({
-      productId,
-      successUrl: `${window.location.origin}/success`,
-      cancelUrl: `${window.location.origin}/pricing`,
-    })
-    window.open(session.url, '_blank')
-  }
-
-  return <button onClick={handleClick}>前往結帳</button>
-}
-```
-
-## On-page Checkout (embedded / modal)
-
-⚠️ Requires a domain registered with Recur. Does NOT work on localhost —
-use Hosted Checkout for local development.
-
-```tsx
-'use client'
-
-import { useRecur } from 'recur-tw'
-
-export function CheckoutButton({ productId }: { productId: string }) {
-  const { checkout, isCheckingOut } = useRecur()
+function CheckoutButton({ productId }: { productId: string }) {
+  const { checkout, isLoading } = useRecur()
 
   const handleClick = async () => {
     await checkout({
-      productId, // or productSlug: 'pro-plan'
+      productId,
+      // Or use productSlug: 'pro-plan'
+
+      // Optional: Pre-fill customer info
       customerEmail: 'user@example.com',
+      customerName: 'John Doe',
+
+      // Optional: Link to your user system
       externalCustomerId: 'user_123',
-      onPaymentComplete: (subscription) => {
-        // subscription.id, subscription.status,
-        // subscription.currentPeriodEnd, subscription.trialEndsAt
-        console.log('Payment successful!', subscription.id)
+
+      // Callbacks
+      onPaymentComplete: (result) => {
+        console.log('Success!', result)
+        // result.id - Subscription/Order ID
+        // result.status - 'ACTIVE', 'TRIALING', etc.
       },
       onPaymentFailed: (error) => {
-        console.error('Failed:', error.message)
+        console.error('Failed:', error)
         return { action: 'retry' } // or 'close' or 'custom'
       },
       onPaymentCancel: () => {
@@ -116,98 +58,30 @@ export function CheckoutButton({ productId }: { productId: string }) {
   }
 
   return (
-    <button onClick={handleClick} disabled={isCheckingOut}>
-      {isCheckingOut ? 'Processing...' : 'Subscribe'}
+    <button onClick={handleClick} disabled={isLoading}>
+      {isLoading ? 'Processing...' : 'Subscribe'}
     </button>
   )
 }
 ```
 
-### Embedded mode container
-
-Embedded mode renders the card form into a container element on your page:
-
-```tsx no-check
-// In RecurProvider config
-<RecurProvider
-  config={{
-    publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY,
-    checkoutMode: 'embedded', // 'embedded' (default) | 'modal'
-    containerElementId: 'recur-checkout-container',
-  }}
->
-  {children}
-</RecurProvider>
-```
+### Using useSubscribe Hook (with state management)
 
 ```tsx
-export function CheckoutPage() {
-  return (
-    <div>
-      <h1>Complete Your Purchase</h1>
-      {/* Recur renders the payment form here */}
-      <div id="recur-checkout-container" />
-    </div>
-  )
-}
-```
+import { useSubscribe } from 'recur-tw'
 
-### Payment failure handling
+function SubscribeButton({ productId }: { productId: string }) {
+  const { subscribe, isLoading, error, subscription } = useSubscribe()
 
-Failure details live in `error.details` (`failure_code`, `can_retry`):
-
-```tsx
-'use client'
-
-import { useRecur, type PaymentFailureDetails } from 'recur-tw'
-
-export function CheckoutWithErrorHandling({ productId }: { productId: string }) {
-  const { checkout } = useRecur()
-
-  const handleClick = () =>
-    checkout({
+  const handleClick = () => {
+    subscribe({
       productId,
-      onPaymentFailed: (error) => {
-        const details = error.details as PaymentFailureDetails | undefined
-        switch (details?.failure_code) {
-          case 'INSUFFICIENT_FUNDS':
-            return {
-              action: 'custom' as const,
-              customTitle: '餘額不足',
-              customMessage: '請使用其他付款方式',
-            }
-          case 'NETWORK_ERROR':
-          case 'TIMEOUT':
-            return { action: 'retry' as const }
-          default:
-            // undefined = use the SDK's default handling
-            return undefined
-        }
+      onPaymentComplete: (sub) => {
+        // Subscription created successfully
+        router.push('/dashboard')
       },
     })
-
-  return <button onClick={handleClick}>Subscribe</button>
-}
-```
-
-## useSubscribe Hook (with state management)
-
-`useSubscribe()` returns `{ subscribe, isLoading, error, reset }` — success
-is reported through the `onPaymentComplete` option, not a return value.
-
-```tsx
-'use client'
-
-import { useState } from 'react'
-import { useSubscribe, type SubscriptionResult } from 'recur-tw'
-
-export function SubscribeWithState({ productId }: { productId: string }) {
-  const [subscription, setSubscription] = useState<SubscriptionResult | null>(null)
-  const { subscribe, isLoading, error } = useSubscribe({
-    onPaymentComplete: (sub) => {
-      setSubscription(sub)
-    },
-  })
+  }
 
   if (subscription) {
     return <p>Subscribed! ID: {subscription.id}</p>
@@ -215,7 +89,7 @@ export function SubscribeWithState({ productId }: { productId: string }) {
 
   return (
     <>
-      <button onClick={() => subscribe({ productId })} disabled={isLoading}>
+      <button onClick={handleClick} disabled={isLoading}>
         Subscribe
       </button>
       {error && <p className="error">{error.message}</p>}
@@ -224,71 +98,152 @@ export function SubscribeWithState({ productId }: { productId: string }) {
 }
 ```
 
-## Listing Products
+## Embedded Mode Setup
 
-`useProducts()` returns `{ data, isLoading, error, refetch }`. Prices are in
-the smallest currency unit (`29900` = NT$299).
+For embedded mode, you need a container element:
 
 ```tsx
-'use client'
+// In RecurProvider config
+<RecurProvider
+  config={{
+    publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY,
+    checkoutMode: 'embedded',
+    containerElementId: 'recur-checkout-container',
+  }}
+>
+  {children}
+</RecurProvider>
 
+// In your checkout page
+function CheckoutPage() {
+  return (
+    <div>
+      <h1>Complete Your Purchase</h1>
+      {/* Recur will render the payment form here */}
+      <div id="recur-checkout-container" />
+    </div>
+  )
+}
+```
+
+## Handling 3D Verification
+
+Recur handles 3D Secure automatically. For mobile apps or specific flows:
+
+```tsx
+await checkout({
+  productId,
+  // These URLs are used when 3D verification requires redirect
+  successUrl: 'https://yourapp.com/checkout/success',
+  cancelUrl: 'https://yourapp.com/checkout/cancel',
+})
+```
+
+## Product Types
+
+Recur supports different product types:
+
+```tsx
+// Subscription (recurring)
+checkout({ productId: 'prod_subscription_xxx' })
+
+// One-time purchase
+checkout({ productId: 'prod_onetime_xxx' })
+
+// Credits (prepaid wallet)
+checkout({ productId: 'prod_credits_xxx' })
+
+// Donation (variable amount)
+checkout({ productId: 'prod_donation_xxx' })
+```
+
+## Listing Products
+
+```tsx
 import { useProducts } from 'recur-tw'
 
-export function PricingPage() {
-  const { data: products, isLoading } = useProducts({
-    type: 'SUBSCRIPTION', // 'SUBSCRIPTION' | 'ONE_TIME' | 'CREDITS' | 'DONATION'
+function PricingPage() {
+  const { products, isLoading } = useProducts({
+    type: 'SUBSCRIPTION', // Filter by type
   })
 
   if (isLoading) return <div>Loading...</div>
 
   return (
     <div className="pricing-grid">
-      {products?.map((product) => (
-        <div key={product.id}>
-          <h2>{product.name}</h2>
-          <p>
-            NT${(product.price / 100).toLocaleString('zh-TW')}
-            {product.billingPeriod === 'MONTHLY' && ' / 月'}
-            {product.billingPeriod === 'YEARLY' && ' / 年'}
-          </p>
-          {product.trialDays ? <p>免費試用 {product.trialDays} 天</p> : null}
-        </div>
+      {products.map(product => (
+        <PricingCard key={product.id} product={product} />
       ))}
     </div>
   )
 }
 ```
 
-Product types: `SUBSCRIPTION` (recurring), `ONE_TIME`, `CREDITS` (prepaid
-wallet), `DONATION` (variable amount). All check out the same way.
+## Payment Failed Handling
 
-## Payment Links (server-side, no frontend needed)
+```tsx
+onPaymentFailed: (error) => {
+  // error.code tells you what went wrong
+  switch (error.code) {
+    case 'CARD_DECLINED':
+      return { action: 'retry' }
+    case 'INSUFFICIENT_FUNDS':
+      return {
+        action: 'custom',
+        customTitle: '餘額不足',
+        customMessage: '請使用其他付款方式',
+      }
+    default:
+      return { action: 'close' }
+  }
+}
+```
 
-Generate a shareable checkout URL from the server:
+## Server-Side Checkout (API)
+
+For server-rendered apps or custom flows:
 
 ```typescript
-import { Recur } from 'recur-tw/server'
-
-const recur = new Recur(process.env.RECUR_SECRET_KEY!)
-
-export async function createLink() {
-  const link = await recur.paymentLinks.create({
-    productSlug: 'pro-plan',
+// Create checkout session
+const response = await fetch('https://api.recur.tw/v1/checkouts', {
+  method: 'POST',
+  headers: {
+    'X-Recur-Secret-Key': process.env.RECUR_SECRET_KEY,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    productId: 'prod_xxx',
+    customerEmail: 'user@example.com',
     successUrl: 'https://yourapp.com/success',
-  })
-  return link.url // share via email, DM, invoice, ...
+    cancelUrl: 'https://yourapp.com/cancel',
+  }),
+})
+
+const { checkoutUrl } = await response.json()
+// Redirect user to checkoutUrl
+```
+
+## Checkout Result Structure
+
+```typescript
+interface CheckoutResult {
+  id: string              // Subscription or Order ID
+  status: string          // 'ACTIVE', 'TRIALING', 'PENDING'
+  productId: string
+  amount: number          // In cents (e.g., 29900 = NT$299)
+  billingPeriod?: string  // 'MONTHLY', 'YEARLY' for subscriptions
+  currentPeriodEnd?: string  // ISO date
+  trialEndsAt?: string    // ISO date if trial
 }
 ```
 
 ## Best Practices
 
-1. **Default to Hosted Checkout** — on-page `checkout()` fails outside
-   registered domains, including localhost.
-2. **Success is confirmed by the server, not the browser** — treat the
-   `successUrl` page as UX only; gate access via webhooks/entitlements.
-3. **Show loading states** — use `isCheckingOut` to disable buttons.
-4. **Use `externalCustomerId`** — links Recur customers to your user system.
-5. **Test in sandbox first** — use `pk_test_` keys during development.
+1. **Always handle all callbacks** - onPaymentComplete, onPaymentFailed, onPaymentCancel
+2. **Show loading states** - Use isLoading to disable buttons during checkout
+3. **Pre-fill customer info** - Reduces friction if you already have user data
+4. **Use externalCustomerId** - Links Recur customers to your user system
+5. **Test in sandbox first** - Use `pk_test_` keys during development
 
 ## Related Skills
 

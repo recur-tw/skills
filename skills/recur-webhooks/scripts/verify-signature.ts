@@ -1,10 +1,5 @@
 /**
- * Verify Recur webhook signature (standalone debugging tool)
- *
- * Note: in application code, prefer the SDK's built-in verification:
- *   recur.webhooks.verify(payload, signature, secret)  // from 'recur-tw/server'
- * This script implements the same algorithm (HMAC-SHA256, hex) for debugging
- * outside your app.
+ * Verify Recur webhook signature
  *
  * Usage:
  *   npx tsx verify-signature.ts <payload> <signature> <secret>

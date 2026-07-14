@@ -4,39 +4,32 @@ description: Implement access control and permission checking with Recur entitle
 license: MIT
 metadata:
   author: recur
-  version: "0.0.8"
-  verified-against: recur-tw@0.16.1
+  version: "0.0.7"
 ---
 
 # Recur Entitlements & Access Control
 
 You are helping implement access control using Recur's entitlements system. Entitlements let you check if a customer has access to your products (subscriptions or one-time purchases).
 
-**Golden rule: client-side checks are for UI only.** Anything that must not
-be bypassed (API responses, premium actions, content delivery) must be gated
-server-side with `recur-tw/server`.
-
 ## Quick Start: Client-Side Check
 
 ```tsx
-'use client'
-
 import { RecurProvider, useCustomer } from 'recur-tw'
 
-// 1. Wrap app with provider and identify the customer
-export function App({ children }: { children: React.ReactNode }) {
+// 1. Wrap app with provider and identify customer
+function App() {
   return (
     <RecurProvider
       config={{ publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY }}
       customer={{ email: 'user@example.com' }}
     >
-      {children}
+      <MyApp />
     </RecurProvider>
   )
 }
 
 // 2. Check access anywhere in your app
-export function PremiumFeature() {
+function PremiumFeature() {
   const { check, isLoading } = useCustomer()
 
   if (isLoading) return <div>Loading...</div>
@@ -44,131 +37,110 @@ export function PremiumFeature() {
   const { allowed } = check('pro-plan')
 
   if (!allowed) {
-    return <a href="/pricing">升級方案</a>
+    return <UpgradePrompt />
   }
 
-  return <div>Premium content</div>
+  return <PremiumContent />
 }
 ```
 
 ## Customer Identification
 
-Identify customers on the provider using one of these (in priority order:
-`id` &gt; `externalId` &gt; `email`):
-
-```tsx no-check
-<RecurProvider customer={{ email: 'user@example.com' }}>   // by email (most common)
-<RecurProvider customer={{ externalId: 'user_123' }}>      // by your system's user ID
-<RecurProvider customer={{ id: 'cus_xxx' }}>               // by Recur customer ID
-```
-
-## Checking Access (client)
-
-### Synchronous check (cached — good for UI rendering)
+Identify customers using one of these methods:
 
 ```tsx
-'use client'
+// By email (most common)
+<RecurProvider customer={{ email: 'user@example.com' }}>
 
-import { useCustomer } from 'recur-tw'
+// By your system's user ID
+<RecurProvider customer={{ externalId: 'user_123' }}>
 
-export function GatedBlock() {
-  const { check } = useCustomer()
+// By Recur customer ID
+<RecurProvider customer={{ id: 'cus_xxx' }}>
+```
 
-  // By product slug (string shorthand) or object form
-  const { allowed, entitlement, reason } = check('pro-plan')
+## Checking Access
 
-  if (!allowed) {
-    // reason: 'no_customer' | 'no_entitlement' | 'not_found'
-    //       | 'expired' | 'insufficient_balance'
-    return <a href="/pricing">Subscribe ({reason})</a>
-  }
+### Synchronous Check (Cached)
 
-  // entitlement: status, source ('subscription' | 'order'),
-  // grantedAt, expiresAt (null = permanent)
-  return <div>Access until: {entitlement?.expiresAt ?? 'forever'}</div>
+Fast, uses cached data. Good for UI rendering.
+
+```tsx
+const { check } = useCustomer()
+
+// Check by product slug
+const { allowed, entitlement } = check('pro-plan')
+
+// Check by product ID
+const { allowed } = check('prod_xxx')
+
+if (allowed) {
+  // User has access
+  // entitlement contains details like status, expiresAt
 }
 ```
 
-### Live check (async — for critical moments)
+### Async Check (Live)
+
+Fetches fresh data from API. Use for critical operations.
 
 ```tsx
-'use client'
+const { check } = useCustomer()
 
-import { useCustomer } from 'recur-tw'
+// Real-time check
+const { allowed, entitlement } = await check('pro-plan', { live: true })
 
-export function CriticalAction() {
-  const { check } = useCustomer()
+// Good for:
+// - Before processing important actions
+// - After checkout to confirm access
+// - When cached data might be stale
+```
 
-  const run = async () => {
-    // Fetches fresh data — use after checkout or before important actions
-    const { allowed } = await check('pro-plan', { live: true })
-    if (!allowed) return
-    // proceed...
-  }
+### Manual Refetch
 
-  return <button onClick={run}>Run</button>
+```tsx
+const { refetch } = useCustomer()
+
+// After checkout completion
+onPaymentComplete: async () => {
+  await refetch() // Refresh entitlements
+  router.push('/dashboard')
 }
 ```
 
-### Refetch after checkout
-
-```tsx
-'use client'
-
-import { useCustomer, useRecur } from 'recur-tw'
-
-export function BuyButton({ productId }: { productId: string }) {
-  const { checkout } = useRecur()
-  const { refetch } = useCustomer()
-
-  const handleClick = () =>
-    checkout({
-      productId,
-      onPaymentComplete: async () => {
-        await refetch() // refresh entitlements so the UI unlocks
-      },
-    })
-
-  return <button onClick={handleClick}>Buy</button>
-}
-```
-
-## Entitlement Structure (client)
+## Entitlement Response Structure
 
 ```typescript
-import type { Entitlement, EntitlementStatus } from 'recur-tw'
-
-function describe(e: Entitlement) {
-  const status: EntitlementStatus = e.status
-  // 'active'    - subscription active
-  // 'trialing'  - in trial period
-  // 'past_due'  - payment failed, grace period
-  // 'canceled'  - cancelled, access until period end
-  // 'purchased' - one-time purchase (permanent)
-  return {
-    product: e.product,     // product slug
-    status,
-    source: e.source,       // 'subscription' | 'order'
-    sourceId: e.sourceId,   // sub_xxx or ord_xxx
-    grantedAt: e.grantedAt,
-    expiresAt: e.expiresAt, // null = permanent
-  }
+interface Entitlement {
+  product: string        // Product slug
+  productId: string      // Product ID
+  status: EntitlementStatus
+  source: 'subscription' | 'order'  // How they got access
+  sourceId: string       // Subscription/Order ID
+  grantedAt: string      // When access was granted
+  expiresAt: string | null  // When access expires (null = permanent)
 }
+
+type EntitlementStatus =
+  | 'active'      // Subscription active
+  | 'trialing'    // In trial period
+  | 'past_due'    // Payment failed, in grace period
+  | 'canceled'    // Cancelled but access until period end
+  | 'purchased'   // One-time purchase (permanent)
 ```
 
 ## Server-Side Checking
 
-`recur.entitlements.check()` returns `{ allowed, subscription? }` — the
-subscription (with `currentPeriodEnd`) is present only when allowed. Use
-`recur.entitlements.list()` to get entitlement statuses.
+### Using Server SDK
 
 ```typescript
 import { Recur } from 'recur-tw/server'
 
 const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
-export async function checkAccess(userEmail: string) {
-  const { allowed, subscription } = await recur.entitlements.check({
+// In API route or server action
+async function checkAccess(userEmail: string) {
+  const { allowed, entitlement } = await recur.entitlements.check({
     product: 'pro-plan',
     customer: { email: userEmail },
   })
@@ -177,59 +149,35 @@ export async function checkAccess(userEmail: string) {
     throw new Error('Upgrade required')
   }
 
-  // subscription?.currentPeriodEnd — end of current billing period
-  return subscription
-}
-
-export async function listAccess(userEmail: string) {
-  const { entitlements } = await recur.entitlements.list({
-    customer: { email: userEmail },
-  })
-  // Each: { product, productId, status, subscriptionId }
-  return entitlements
+  return entitlement
 }
 ```
 
-### Gating an API route
+### Using REST API Directly
 
 ```typescript
-import { NextResponse } from 'next/server'
-import { Recur } from 'recur-tw/server'
-import { auth } from '@/lib/auth' // your auth solution
-
-const recur = new Recur(process.env.RECUR_SECRET_KEY!)
-
-export async function GET() {
-  const session = await auth()
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+// GET /api/v1/customers/entitlements
+const response = await fetch(
+  `https://api.recur.tw/v1/customers/entitlements?email=${encodeURIComponent(email)}`,
+  {
+    headers: {
+      'X-Recur-Secret-Key': process.env.RECUR_SECRET_KEY!,
+    },
   }
+)
 
-  const { allowed } = await recur.entitlements.check({
-    product: 'pro-plan',
-    customer: { email: session.user.email },
-  })
-  if (!allowed) {
-    return NextResponse.json({ error: 'Subscription required' }, { status: 403 })
-  }
-
-  return NextResponse.json({ data: 'premium content' })
-}
+const { customer, subscription, entitlements } = await response.json()
 ```
 
 ## Common Patterns
 
-### Paywall component
+### Paywall Component
 
 ```tsx
-'use client'
-
-import { useCustomer } from 'recur-tw'
-
-export function Paywall({
+function Paywall({
   children,
   product,
-  fallback,
+  fallback
 }: {
   children: React.ReactNode
   product: string
@@ -237,109 +185,209 @@ export function Paywall({
 }) {
   const { check, isLoading } = useCustomer()
 
-  if (isLoading) return <div>Loading...</div>
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
 
   const { allowed } = check(product)
+
   if (!allowed) {
-    return <>{fallback ?? <a href="/pricing">升級解鎖</a>}</>
+    return fallback || <UpgradePrompt product={product} />
   }
+
   return <>{children}</>
 }
+
+// Usage
+<Paywall product="pro-plan">
+  <PremiumDashboard />
+</Paywall>
 ```
 
-### Multiple product tiers
+### Feature Flag Style
 
 ```tsx
-'use client'
+function useFeature(featureProduct: string) {
+  const { check, isLoading } = useCustomer()
 
-import { useCustomer } from 'recur-tw'
+  if (isLoading) {
+    return { enabled: false, loading: true }
+  }
 
-export function TieredDashboard() {
-  const { check } = useCustomer()
+  const { allowed, entitlement } = check(featureProduct)
 
-  if (check('enterprise-plan').allowed) return <div>Enterprise</div>
-  if (check('pro-plan').allowed) return <div>Pro</div>
-  return <div>Free</div>
+  return {
+    enabled: allowed,
+    loading: false,
+    entitlement,
+    isTrial: entitlement?.status === 'trialing',
+    isPastDue: entitlement?.status === 'past_due',
+  }
+}
+
+// Usage
+function MyComponent() {
+  const { enabled, isTrial } = useFeature('pro-plan')
+
+  if (!enabled) return <UpgradeButton />
+
+  return (
+    <>
+      {isTrial && <TrialBanner />}
+      <ProFeature />
+    </>
+  )
 }
 ```
 
-### Status-aware banners
+### API Middleware
+
+```typescript
+// middleware/requireSubscription.ts
+import { Recur } from 'recur-tw/server'
+
+const recur = new Recur(process.env.RECUR_SECRET_KEY!)
+
+export async function requireSubscription(
+  req: Request,
+  product: string
+) {
+  const userEmail = await getUserEmail(req) // Your auth logic
+
+  const { allowed, denial } = await recur.entitlements.check({
+    product,
+    customer: { email: userEmail },
+  })
+
+  if (!allowed) {
+    throw new Response(JSON.stringify({
+      error: 'Subscription required',
+      reason: denial?.reason, // 'no_customer', 'no_entitlement', etc.
+    }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+}
+
+// Usage in API route
+export async function GET(req: Request) {
+  await requireSubscription(req, 'pro-plan')
+
+  // User has access, continue...
+  return Response.json({ data: 'premium content' })
+}
+```
+
+### Multiple Product Tiers
 
 ```tsx
-'use client'
-
-import { useCustomer } from 'recur-tw'
-
-export function SubscriptionBanner() {
+function PricingGate() {
   const { check } = useCustomer()
-  const { allowed, entitlement } = check('pro-plan')
 
-  if (!allowed || !entitlement) return null
+  const hasPro = check('pro-plan').allowed
+  const hasEnterprise = check('enterprise-plan').allowed
 
-  if (entitlement.status === 'trialing' && entitlement.expiresAt) {
-    const msLeft = new Date(entitlement.expiresAt).getTime() - Date.now()
-    const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
-    return <div>試用期剩 {daysLeft} 天</div>
+  if (hasEnterprise) {
+    return <EnterpriseDashboard />
   }
 
-  if (entitlement.status === 'past_due') {
-    return <div>扣款失敗,請更新付款方式(寬限期內仍可使用)</div>
+  if (hasPro) {
+    return <ProDashboard />
   }
 
-  if (entitlement.status === 'canceled') {
-    return <div>已取消,可使用至 {entitlement.expiresAt}</div>
-  }
+  return <FreeDashboard />
+}
+```
 
-  return null
+## Handling Edge Cases
+
+### Past Due Subscriptions
+
+```tsx
+const { allowed, entitlement } = check('pro-plan')
+
+if (allowed && entitlement?.status === 'past_due') {
+  // Show warning but allow access during grace period
+  return (
+    <>
+      <PaymentFailedBanner />
+      <PremiumContent />
+    </>
+  )
+}
+```
+
+### Trial Subscriptions
+
+```tsx
+const { entitlement } = check('pro-plan')
+
+if (entitlement?.status === 'trialing') {
+  const trialEnds = new Date(entitlement.expiresAt!)
+  const daysLeft = Math.ceil((trialEnds - Date.now()) / (1000 * 60 * 60 * 24))
+
+  return <TrialBanner daysLeft={daysLeft} />
+}
+```
+
+### Cancelled but Active
+
+```tsx
+const { entitlement } = check('pro-plan')
+
+if (entitlement?.status === 'canceled') {
+  // User cancelled but still has access until period end
+  return (
+    <>
+      <ResubscribeBanner expiresAt={entitlement.expiresAt} />
+      <PremiumContent />
+    </>
+  )
 }
 ```
 
 ## Denial Reasons
 
-`reason` is present on the check result when `allowed` is false:
+When `allowed` is `false`, check the denial reason:
 
-```tsx
-'use client'
+```typescript
+const { allowed, denial } = check('pro-plan')
 
-import { useCustomer } from 'recur-tw'
-
-export function UpgradePrompt() {
-  const { check } = useCustomer()
-  const { allowed, reason } = check('pro-plan')
-
-  if (allowed) return null
-
-  switch (reason) {
+if (!allowed) {
+  switch (denial?.reason) {
     case 'no_customer':
-      return <a href="/signup">建立帳號</a>
+      // Customer not found
+      return <CreateAccountPrompt />
+
     case 'no_entitlement':
-    case 'not_found':
-      return <a href="/pricing">訂閱方案</a>
+      // No subscription to this product
+      return <SubscribePrompt />
+
     case 'expired':
-      return <a href="/pricing">重新訂閱</a>
+      // Subscription/access expired
+      return <RenewPrompt />
+
     case 'insufficient_balance':
-      return <a href="/credits">購買點數</a>
+      // For credit-based products
+      return <BuyCreditsPrompt />
+
     default:
-      return <a href="/pricing">升級</a>
+      return <GenericUpgradePrompt />
   }
 }
 ```
 
 ## Best Practices
 
-1. **Cached checks for UI, live checks for actions** — `check(slug)` is
-   synchronous and instant; `check(slug, { live: true })` guarantees
-   freshness.
-2. **Server-side gate everything that matters** — the client can be
-   bypassed.
-3. **Handle all statuses** — active, trialing, past_due, canceled,
-   purchased.
-4. **Refetch after checkout** — so the UI unlocks without a reload.
-5. **Show upgrade prompts, not errors** — graceful degradation converts
-   better.
+1. **Use cached checks for UI** - Fast rendering, good UX
+2. **Use live checks for actions** - Ensure fresh data for important operations
+3. **Handle all statuses** - active, trialing, past_due, canceled
+4. **Refetch after checkout** - Ensure UI updates after purchase
+5. **Implement graceful degradation** - Show upgrade prompts, not errors
 
 ## Related Skills
 
 - `/recur-quickstart` - Initial SDK setup
 - `/recur-checkout` - Implement purchase flows
-- `/recur-webhooks` - Side effects when subscriptions change
+- `/recur-webhooks` - Sync entitlements with webhooks
