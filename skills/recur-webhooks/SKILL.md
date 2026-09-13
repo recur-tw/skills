@@ -1,6 +1,6 @@
 ---
 name: recur-webhooks
-description: Set up and handle Recur webhook events for payment notifications. Use when implementing webhook handlers, verifying signatures, handling subscription events, or when user mentions "webhook", "付款通知", "訂閱事件", "payment notification".
+description: Set up and handle Recur webhook events for payment notifications. Use when implementing webhook handlers, verifying signatures, handling subscription events, or when user mentions "webhook", "付款通知", "訂閱事件", "payment notification". Taiwan subscription billing via PAYUNi (recur.tw, 台灣訂閱金流).
 license: MIT
 metadata:
   author: recur

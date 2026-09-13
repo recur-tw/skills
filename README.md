@@ -1,5 +1,7 @@
 # Recur Skills
 
+[![skills.sh](https://skills.sh/b/recur-tw/skills)](https://skills.sh/recur-tw/skills)
+
 Skills to help developers integrate [Recur](https://recur.tw) - Taiwan's subscription payment platform.
 
 Supports Claude Code, Cursor, Codex, GitHub Copilot, Gemini CLI, Antigravity, and other AI coding agents.
@@ -18,6 +20,15 @@ npx skills add recur-tw/skills
 /plugin marketplace add recur-tw/skills
 /plugin install recur-skills@recur-skills
 ```
+
+Or from a shell:
+
+```bash
+claude plugin marketplace add recur-tw/skills
+claude plugin install recur-skills@recur-skills
+```
+
+Plugin skills are namespaced, e.g. `/recur-skills:recur-checkout`. See [Claude Code plugins](https://code.claude.com/docs/en/plugins).
 
 ## Getting Started
 
@@ -98,6 +109,7 @@ Once installed, Claude will automatically use these skills when you're working o
 
 ## Links
 
+- [skills.sh](https://skills.sh/recur-tw/skills): `npx skills add recur-tw/skills`
 - [Recur Website](https://recur.tw)
 - [Documentation](https://recur.tw/docs)
 - [SDK on npm](https://www.npmjs.com/package/recur-tw)

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "recur-skills",
+  "displayName": "Recur Skills",
+  "version": "0.0.8",
+  "description": "Skills for Recur SDK integration: quickstart, checkout, webhooks, entitlements, and customer portal.",
+  "author": {
+    "name": "Recur",
+    "email": "hi@recur.tw",
+    "url": "https://recur.tw"
+  },
+  "homepage": "https://docs.recur.tw/guides/skills",
+  "repository": "https://github.com/recur-tw/skills",
+  "license": "MIT",
+  "keywords": [
+    "recur",
+    "payments",
+    "taiwan",
+    "subscription",
+    "checkout",
+    "webhooks"
+  ]
+}

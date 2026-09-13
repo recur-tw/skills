@@ -1,6 +1,6 @@
 ---
 name: recur-quickstart
-description: Quick setup guide for Recur payment integration. Use when starting a new Recur integration, setting up API keys, installing the SDK, or when user mentions "integrate Recur", "setup Recur", "Recur 串接", "金流設定".
+description: Quick setup guide for Recur payment integration. Use when starting a new Recur integration, setting up API keys, installing the SDK, or when user mentions "integrate Recur", "setup Recur", "Recur 串接", "金流設定". Taiwan subscription billing via PAYUNi (recur.tw, 台灣訂閱金流).
 license: MIT
 metadata:
   author: recur

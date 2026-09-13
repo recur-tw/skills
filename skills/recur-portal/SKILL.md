@@ -1,6 +1,6 @@
 ---
 name: recur-portal
-description: Implement Customer Portal for subscription self-service. Use when building account pages, letting customers manage subscriptions, update payment methods, view billing history, or when user mentions "customer portal", "帳戶管理", "訂閱管理", "更新付款方式", "self-service".
+description: Implement Customer Portal for subscription self-service. Use when building account pages, letting customers manage subscriptions, update payment methods, view billing history, or when user mentions "customer portal", "帳戶管理", "訂閱管理", "更新付款方式", "self-service". Taiwan subscription billing via PAYUNi (recur.tw, 台灣訂閱金流).
 license: MIT
 metadata:
   author: recur
