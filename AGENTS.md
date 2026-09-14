@@ -93,8 +93,14 @@ import { RecurProvider } from 'recur-tw'
 
 **Checkout Flow**
 ```tsx
-const { checkout } = useRecur()
-await checkout({ productId: 'prod_xxx', mode: 'modal' })
+// Hosted (recommended): navigates to checkout.recur.tw
+const { redirectToCheckout } = useRecur()
+await redirectToCheckout({ productId, successUrl, cancelUrl })
+
+// Modal/embedded: presentation comes from <RecurProvider config={{ checkoutMode }}>,
+// not from a `mode` argument — there is no mode option on the call.
+const { subscribe } = useSubscribe({ onPaymentComplete: (sub) => {} })
+await subscribe({ productId })
 ```
 
 **Entitlement Check**

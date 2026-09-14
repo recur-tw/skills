@@ -4,7 +4,7 @@ description: Implement access control and permission checking with Recur entitle
 license: MIT
 metadata:
   author: recur
-  version: "0.0.10"
+  version: "0.0.11"
 ---
 
 # Recur Entitlements & Access Control
@@ -111,14 +111,24 @@ onPaymentComplete: async () => {
 ## Entitlement Response Structure
 
 ```typescript
+interface CheckResult {          // what check() returns
+  allowed: boolean
+  reason?: 'no_customer' | 'no_entitlement' | 'not_found' | 'expired' | 'insufficient_balance'
+  entitlement?: Entitlement
+  balance?: number               // CREDITS products
+  unlimited?: boolean
+  subscription?: { id: string; status: string; product: { id: string; slug: string; name: string }; currentPeriodEnd: string }
+}
+
 interface Entitlement {
   product: string        // Product slug
-  productId: string      // Product ID
+  productId: string      // Product ID (CUID)
   status: EntitlementStatus
   source: 'subscription' | 'order'  // How they got access
   sourceId: string       // Subscription/Order ID
   grantedAt: string      // When access was granted
   expiresAt: string | null  // When access expires (null = permanent)
+  subscriptionId?: string
 }
 
 type EntitlementStatus =
@@ -140,7 +150,9 @@ const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
 // In API route or server action
 async function checkAccess(userEmail: string) {
-  const { allowed, entitlement } = await recur.entitlements.check({
+  // Server EntitlementCheckResult is { allowed, subscription? } — there is no
+  // `entitlement` field here (that one belongs to the React check()).
+  const { allowed, subscription } = await recur.entitlements.check({
     product: 'pro-plan',
     customer: { email: userEmail },
   })
@@ -149,7 +161,7 @@ async function checkAccess(userEmail: string) {
     throw new Error('Upgrade required')
   }
 
-  return entitlement
+  return subscription
 }
 ```
 
@@ -166,6 +178,9 @@ const response = await fetch(
   }
 )
 
+// REST responses are snake_case (the API wrapper converts them), unlike the SDK's
+// camelCase types: customer { id, email, name, external_id }, subscription | null,
+// entitlements[] with product_id / granted_at / expires_at / source_id.
 const { customer, subscription, entitlements } = await response.json()
 ```
 
@@ -254,16 +269,13 @@ export async function requireSubscription(
 ) {
   const userEmail = await getUserEmail(req) // Your auth logic
 
-  const { allowed, denial } = await recur.entitlements.check({
+  const { allowed } = await recur.entitlements.check({
     product,
     customer: { email: userEmail },
   })
 
   if (!allowed) {
-    throw new Response(JSON.stringify({
-      error: 'Subscription required',
-      reason: denial?.reason, // 'no_customer', 'no_entitlement', etc.
-    }), {
+    throw new Response(JSON.stringify({ error: 'Subscription required' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
     })
@@ -349,13 +361,13 @@ if (entitlement?.status === 'canceled') {
 
 ## Denial Reasons
 
-When `allowed` is `false`, check the denial reason:
+When `allowed` is `false`, `CheckResult.reason` says why (`'no_customer' | 'no_entitlement' | 'not_found' | 'expired' | 'insufficient_balance'`):
 
 ```typescript
-const { allowed, denial } = check('pro-plan')
+const { allowed, reason } = check('pro-plan')
 
 if (!allowed) {
-  switch (denial?.reason) {
+  switch (reason) {
     case 'no_customer':
       // Customer not found
       return <CreateAccountPrompt />

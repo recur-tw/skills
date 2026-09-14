@@ -4,7 +4,7 @@ description: Quick setup guide for Recur payment integration, from account signu
 license: MIT
 metadata:
   author: recur
-  version: "0.0.10"
+  version: "0.0.11"
 ---
 
 # Recur Quickstart
@@ -94,13 +94,15 @@ RECUR_SECRET_KEY=sk_test_xxx                   # backend only
 Wrap your app with `RecurProvider`:
 
 ```tsx
+'use client'
+
 import { RecurProvider } from 'recur-tw'
 
 export default function App({ children }) {
   return (
     <RecurProvider
       config={{
-        publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY,
+        publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY!,
       }}
     >
       {children}
@@ -109,29 +111,47 @@ export default function App({ children }) {
 }
 ```
 
-## Step 4: Create Your First Checkout
+## Step 4: Create Your First Checkout (Hosted)
+
+Hosted Checkout redirects to checkout.recur.tw and works on localhost. (Modal/embedded
+checkout via `useSubscribe()` needs `checkoutMode` on the provider and a registered domain —
+see `/recur-checkout`.)
 
 ```tsx
+'use client'   // hooks + window: this must be a Client Component in the App Router
+
+import { useState } from 'react'
 import { useRecur } from 'recur-tw'
 
 function PricingButton({ productId }: { productId: string }) {
-  const { checkout } = useRecur()
+  const { redirectToCheckout } = useRecur()
+  const [redirecting, setRedirecting] = useState(false)   // redirectToCheckout does not set isCheckingOut
 
   const handleCheckout = async () => {
-    await checkout({
-      productId,
-      onPaymentComplete: (subscription) => {
-        console.log('Payment successful!', subscription)
-      },
-      onPaymentFailed: (error) => {
-        console.error('Payment failed:', error)
-      },
-    })
+    setRedirecting(true)
+    try {
+      await redirectToCheckout({
+        productId,                                 // the CUID from Step 0 (or productSlug)
+        successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/pricing`,
+      })
+    } catch (err) {
+      setRedirecting(false)
+      // Invalid key, unreachable API, bad product id — show it, don't swallow it
+      console.error('Failed to start checkout:', err)
+      alert('無法開始結帳，請稍後再試')
+    }
   }
 
-  return <button onClick={handleCheckout}>Subscribe</button>
+  return (
+    <button onClick={handleCheckout} disabled={redirecting}>
+      {redirecting ? 'Redirecting...' : 'Subscribe'}
+    </button>
+  )
 }
 ```
+
+The result arrives on your success page and via webhooks (Step 5), not through a callback.
 
 ## Step 5: Set Up Webhooks
 
@@ -175,4 +195,4 @@ Create a webhook endpoint to receive payment notifications. See the `recur-webho
 - [MCP setup for every agent](https://docs.recur.tw/guides/mcp)
 - [SDK on npm](https://www.npmjs.com/package/recur-tw)
 - [CLI on npm (`@recur-tw/cli`)](https://www.npmjs.com/package/@recur-tw/cli)
-- [API Reference](https://docs.recur.tw/api)
+- [API Reference](https://docs.recur.tw/api-reference)

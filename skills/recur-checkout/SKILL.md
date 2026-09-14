@@ -4,109 +4,161 @@ description: Implement Recur checkout flows including embedded, modal, and redir
 license: MIT
 metadata:
   author: recur
-  version: "0.0.10"
+  version: "0.0.11"
 ---
 
 # Recur Checkout Integration
 
-You are helping implement Recur checkout flows. Recur supports multiple checkout modes for different use cases.
+You are helping implement Recur checkout flows. Everything below is checked against the
+`recur-tw` typings (`RecurContextValue`, `UseSubscribeResult`, `CheckoutOptions`,
+`RedirectToCheckoutOptions`, `SubscriptionResult`). Product IDs are CUIDs from
+`list_products` / the dashboard (e.g. `cmfxq8n2a0001l8yz3k5p9t7d`); `prod_xxx` in the
+examples is a placeholder. You can also pass `productSlug`.
 
 ## Checkout Modes
 
-| Mode | Best For | User Experience |
-|------|----------|-----------------|
-| `embedded` | SPA apps | Form renders inline in your page |
-| `modal` | Quick purchases | Form appears in a dialog overlay |
-| `redirect` | Simple integration | Full page redirect to Recur |
+| Mode | How | Best For |
+|------|-----|----------|
+| **Hosted** (recommended) | `useRecur().redirectToCheckout()` → checkout.recur.tw | Any app, works on localhost |
+| **Modal** | `useSubscribe()` / `useRecur().checkout()` with provider `checkoutMode: 'modal'` | Quick purchases without leaving the page |
+| **Embedded** | same hooks with provider `checkoutMode: 'embedded'` + `containerElementId` | Custom checkout pages |
 
-## Basic Implementation
+`checkoutMode` lives on `<RecurProvider config>`, not on the call. The provider default is
+`'embedded'`, which throws without `containerElementId` — set `checkoutMode: 'modal'` when
+you want the popup. There is no `mode: 'hosted' | 'modal'` option on any call.
 
-### Using useRecur Hook
+## Hosted Checkout (recommended)
+
+`isCheckingOut` is only set by `checkout()`; `redirectToCheckout()` creates the session and
+navigates away, so track your own pending flag.
 
 ```tsx
+'use client'
+
+import { useState } from 'react'
 import { useRecur } from 'recur-tw'
 
 function CheckoutButton({ productId }: { productId: string }) {
-  const { checkout, isLoading } = useRecur()
+  const { redirectToCheckout } = useRecur()
+  const [redirecting, setRedirecting] = useState(false)
 
   const handleClick = async () => {
-    await checkout({
-      productId,
-      // Or use productSlug: 'pro-plan'
-
-      // Optional: Pre-fill customer info
-      customerEmail: 'user@example.com',
-      customerName: 'John Doe',
-
-      // Optional: Link to your user system
-      externalCustomerId: 'user_123',
-
-      // Callbacks
-      onPaymentComplete: (result) => {
-        console.log('Success!', result)
-        // result.id - Subscription/Order ID
-        // result.status - 'ACTIVE', 'TRIALING', etc.
-      },
-      onPaymentFailed: (error) => {
-        console.error('Failed:', error)
-        return { action: 'retry' } // or 'close' or 'custom'
-      },
-      onPaymentCancel: () => {
-        console.log('User cancelled')
-      },
-    })
+    setRedirecting(true)
+    try {
+      await redirectToCheckout({
+        productId,                            // or productSlug: 'pro-plan'
+        successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/pricing`,
+        customerEmail: 'user@example.com',    // optional, pre-fills the checkout page
+        customerName: 'John Doe',             // optional
+        externalCustomerId: 'user_123',       // optional, links to your user system
+      })
+    } catch (err) {
+      setRedirecting(false)
+      console.error('Failed to start checkout:', err)
+    }
   }
 
   return (
-    <button onClick={handleClick} disabled={isLoading}>
-      {isLoading ? 'Processing...' : 'Subscribe'}
+    <button onClick={handleClick} disabled={redirecting}>
+      {redirecting ? 'Redirecting...' : 'Subscribe'}
     </button>
   )
 }
 ```
 
-### Using useSubscribe Hook (with state management)
+The browser navigates away; no callbacks fire. Confirm the payment on your success page
+(via the session id) or with webhooks.
+
+## Modal / Embedded Checkout
+
+### Using useSubscribe (recommended for modal)
+
+Callbacks are options of the hook; `subscribe()` takes the checkout options only.
 
 ```tsx
+'use client'
+
 import { useSubscribe } from 'recur-tw'
+import { useRouter } from 'next/navigation'
 
 function SubscribeButton({ productId }: { productId: string }) {
-  const { subscribe, isLoading, error, subscription } = useSubscribe()
-
-  const handleClick = () => {
-    subscribe({
-      productId,
-      onPaymentComplete: (sub) => {
-        // Subscription created successfully
-        router.push('/dashboard')
-      },
-    })
-  }
-
-  if (subscription) {
-    return <p>Subscribed! ID: {subscription.id}</p>
-  }
+  const router = useRouter()
+  const { subscribe, isLoading, error, reset } = useSubscribe({
+    onPaymentComplete: (subscription) => {
+      // subscription: SubscriptionResult — id, status, productId, amount, currentPeriodEnd
+      router.push('/dashboard')
+    },
+    onPaymentFailed: (error) => {
+      console.error('Failed:', error.code, error.message)
+      return { action: 'retry' } // or 'close' or 'custom'
+    },
+    onPaymentCancel: () => console.log('User cancelled'),
+  })
 
   return (
     <>
-      <button onClick={handleClick} disabled={isLoading}>
-        Subscribe
+      <button
+        onClick={() => subscribe({ productId, customerEmail: 'user@example.com' })}
+        disabled={isLoading}
+      >
+        {isLoading ? 'Processing...' : 'Subscribe'}
       </button>
-      {error && <p className="error">{error.message}</p>}
+      {error && <p className="error" onClick={reset}>{error.message}</p>}
     </>
   )
 }
 ```
 
-## Embedded Mode Setup
+`useSubscribe()` returns `{ subscribe, mutate, isLoading, error, reset }` — there is no
+`subscription` field; use `onPaymentComplete` for the result.
 
-For embedded mode, you need a container element:
+### Using useRecur().checkout (callbacks inline)
 
 ```tsx
-// In RecurProvider config
+'use client'
+
+import { useRecur } from 'recur-tw'
+
+function CheckoutButton({ productId }: { productId: string }) {
+  const { checkout, isCheckingOut } = useRecur()
+
+  const handleClick = () =>
+    checkout({
+      productId,
+      customerEmail: 'user@example.com',    // optional; collected in the form if omitted
+      customerName: 'John Doe',
+      externalCustomerId: 'user_123',
+      onPaymentComplete: (subscription) => console.log('Success!', subscription.id, subscription.status),
+      onPaymentFailed: (error) => ({ action: 'retry' }),
+      onPaymentCancel: () => console.log('User cancelled'),
+    })
+
+  return (
+    <button onClick={handleClick} disabled={isCheckingOut}>
+      {isCheckingOut ? 'Processing...' : 'Subscribe'}
+    </button>
+  )
+}
+```
+
+### Provider setup for modal / embedded
+
+```tsx
+// Modal (popup)
 <RecurProvider
   config={{
-    publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY,
+    publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY!,
+    checkoutMode: 'modal',
+  }}
+>
+  {children}
+</RecurProvider>
+
+// Embedded (inline form) — the container must exist in the DOM
+<RecurProvider
+  config={{
+    publishableKey: process.env.NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY!,
     checkoutMode: 'embedded',
     containerElementId: 'recur-checkout-container',
   }}
@@ -114,47 +166,76 @@ For embedded mode, you need a container element:
   {children}
 </RecurProvider>
 
-// In your checkout page
 function CheckoutPage() {
   return (
     <div>
       <h1>Complete Your Purchase</h1>
-      {/* Recur will render the payment form here */}
+      {/* Recur renders the payment form here */}
       <div id="recur-checkout-container" />
     </div>
   )
 }
 ```
 
-## Handling 3D Verification
+Modal/embedded checkout needs a registered domain; on `localhost` use Hosted Checkout.
 
-Recur handles 3D Secure automatically. For mobile apps or specific flows:
+## Option Types
 
-```tsx
-await checkout({
-  productId,
-  // These URLs are used when 3D verification requires redirect
-  successUrl: 'https://yourapp.com/checkout/success',
-  cancelUrl: 'https://yourapp.com/checkout/cancel',
-})
+```typescript
+// redirectToCheckout()
+interface RedirectToCheckoutOptions {
+  productId?: string          // or productSlug — one is required
+  productSlug?: string
+  mode?: 'PAYMENT' | 'SUBSCRIPTION' | 'SETUP'  // usually inferred from the product
+  successUrl: string
+  cancelUrl: string
+  customerEmail?: string
+  customerName?: string
+  externalCustomerId?: string
+}
+
+// checkout() / subscribe()
+interface CheckoutOptions {
+  productId?: string
+  productSlug?: string
+  customerEmail?: string
+  customerName?: string
+  externalCustomerId?: string
+  successUrl?: string         // used if 3-D Secure needs a redirect
+  cancelUrl?: string
+  // checkout() only — for subscribe() pass these to useSubscribe():
+  onPaymentComplete?: (subscription: SubscriptionResult) => void
+  onPaymentFailed?: (error: CheckoutError) => PaymentFailedAction | void
+  onPaymentCancel?: () => void
+  onSuccess?: (result: CheckoutResult) => void   // session created (before payment)
+  onError?: (error: CheckoutError) => void
+}
+
+interface SubscriptionResult {          // onPaymentComplete argument
+  id: string
+  status: string                        // 'ACTIVE', 'TRIALING', ...
+  productId: string
+  amount: number                        // whole TWD (499 = NT$499). NEVER divide by 100
+  billingPeriod: string
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  trialEndsAt?: string
+  nextBillingDate?: string
+}
 ```
+
+No `trialDays`, `quantity`, or `metadata` on these options — trials and pricing come from
+the product (the server SDK's `checkoutSessions.create()` does accept `metadata`).
 
 ## Product Types
 
-Recur supports different product types:
+All four types go through the same calls; the product decides the behaviour:
 
 ```tsx
-// Subscription (recurring)
-checkout({ productId: 'prod_subscription_xxx' })
-
-// One-time purchase
-checkout({ productId: 'prod_onetime_xxx' })
-
-// Credits (prepaid wallet)
-checkout({ productId: 'prod_credits_xxx' })
-
-// Donation (variable amount)
-checkout({ productId: 'prod_donation_xxx' })
+redirectToCheckout({ productSlug: 'pro-monthly', successUrl, cancelUrl })  // SUBSCRIPTION (recurring)
+redirectToCheckout({ productSlug: 'ebook', successUrl, cancelUrl })        // ONE_TIME
+redirectToCheckout({ productSlug: 'credits-100', successUrl, cancelUrl })  // CREDITS (prepaid wallet)
+redirectToCheckout({ productSlug: 'support-us', successUrl, cancelUrl })   // DONATION (variable amount)
 ```
 
 ## Listing Products
@@ -163,15 +244,14 @@ checkout({ productId: 'prod_donation_xxx' })
 import { useProducts } from 'recur-tw'
 
 function PricingPage() {
-  const { products, isLoading } = useProducts({
-    type: 'SUBSCRIPTION', // Filter by type
-  })
+  const { data: products, isLoading, error } = useProducts({ type: 'SUBSCRIPTION' })
 
   if (isLoading) return <div>Loading...</div>
+  if (error) return <div>{error.message}</div>
 
   return (
     <div className="pricing-grid">
-      {products.map(product => (
+      {products?.map((product) => (
         <PricingCard key={product.id} product={product} />
       ))}
     </div>
@@ -179,38 +259,56 @@ function PricingPage() {
 }
 ```
 
+`Product` fields: `id`, `name`, `slug`, `description`, `type`, `billingPeriod`
+(`'MONTHLY' | 'YEARLY' | ... | null`), `price` (whole TWD), `currency`, `trialDays`,
+`metadata`. There is no `priceFormatted` on the SDK type — format with
+`` `NT$${product.price.toLocaleString()}` ``.
+
 ## Payment Failed Handling
+
+`CheckoutError.code` is `'PAYMENT_FAILED'` for a declined payment; the gateway's own code
+is in `error.details.failure_code` (with `failure_message` and `can_retry`).
+`CheckoutErrorDetails` is a union — an array for conflict errors, an object for payment
+failures — so narrow it before reading the fields.
 
 ```tsx
 onPaymentFailed: (error) => {
-  // error.code tells you what went wrong
-  switch (error.code) {
+  const details = Array.isArray(error.details) ? undefined : error.details
+
+  switch (details?.failure_code) {
     case 'CARD_DECLINED':
       return { action: 'retry' }
     case 'INSUFFICIENT_FUNDS':
-      return {
-        action: 'custom',
-        customTitle: '餘額不足',
-        customMessage: '請使用其他付款方式',
-      }
+      return { action: 'custom', customTitle: '餘額不足', customMessage: '請使用其他付款方式' }
     default:
-      return { action: 'close' }
+      return details?.can_retry ? { action: 'retry' } : { action: 'close' }
   }
 }
 ```
 
-## Server-Side Checkout (API)
-
-For server-rendered apps or custom flows:
-
-Product IDs are CUIDs from `list_products` / the dashboard (e.g. `cmfxq8n2a0001l8yz3k5p9t7d`); `prod_xxx` is a placeholder.
+## Server-Side Checkout (Hosted, no React)
 
 ```typescript
-// Create checkout session
+import { Recur } from 'recur-tw/server'
+
+const recur = new Recur(process.env.RECUR_SECRET_KEY!)
+const session = await recur.checkoutSessions.create({
+  productId: 'prod_xxx',                 // a CUID from list_products
+  successUrl: 'https://yourapp.com/success',
+  cancelUrl: 'https://yourapp.com/cancel',
+  customerEmail: 'user@example.com',
+  metadata: { plan: 'pro' },             // optional, server-side only
+})
+// redirect the customer to session.url
+```
+
+Or with plain REST:
+
+```typescript
 const response = await fetch('https://api.recur.tw/v1/checkout/sessions', {
   method: 'POST',
   headers: {
-    'X-Recur-Secret-Key': process.env.RECUR_SECRET_KEY,
+    Authorization: `Bearer ${process.env.RECUR_SECRET_KEY}`,   // X-Recur-Secret-Key also works
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -223,31 +321,17 @@ const response = await fetch('https://api.recur.tw/v1/checkout/sessions', {
 
 // The session object is the response body itself (no outer `data` wrapper, snake_case keys)
 const { url } = await response.json()
-// Redirect the customer to `url` — the hosted checkout page.
-// (/v1/checkouts is the embedded-form endpoint and returns a different shape.)
-```
-
-## Checkout Result Structure
-
-```typescript
-interface CheckoutResult {
-  id: string              // Subscription or Order ID
-  status: string          // 'ACTIVE', 'TRIALING', 'PENDING'
-  productId: string
-  amount: number          // In cents (e.g., 29900 = NT$299)
-  billingPeriod?: string  // 'MONTHLY', 'YEARLY' for subscriptions
-  currentPeriodEnd?: string  // ISO date
-  trialEndsAt?: string    // ISO date if trial
-}
+// Redirect the customer to `url`. (/v1/checkouts is the embedded-form endpoint, different shape.)
 ```
 
 ## Best Practices
 
-1. **Always handle all callbacks** - onPaymentComplete, onPaymentFailed, onPaymentCancel
-2. **Show loading states** - Use isLoading to disable buttons during checkout
-3. **Pre-fill customer info** - Reduces friction if you already have user data
-4. **Use externalCustomerId** - Links Recur customers to your user system
-5. **Test in sandbox first** - Use `pk_test_` keys during development
+1. **Default to Hosted Checkout** — works everywhere, including localhost
+2. **Handle every callback** on modal/embedded — onPaymentComplete, onPaymentFailed, onPaymentCancel
+3. **Show loading states** — `isCheckingOut` (useRecur, modal/embedded only) / `isLoading` (useSubscribe); for `redirectToCheckout()` track your own flag
+4. **Pre-fill customer info** when you already have it; it is optional
+5. **Use externalCustomerId** to link Recur customers to your user system
+6. **Test in sandbox first** — `pk_test_` / `sk_test_` keys
 
 ## Related Skills
 

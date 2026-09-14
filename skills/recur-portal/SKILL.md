@@ -4,7 +4,7 @@ description: Implement Customer Portal for subscription self-service. Use when b
 license: MIT
 metadata:
   author: recur
-  version: "0.0.10"
+  version: "0.0.11"
 ---
 
 # Recur Customer Portal Integration

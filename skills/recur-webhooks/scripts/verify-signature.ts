@@ -5,19 +5,24 @@
  *   npx tsx verify-signature.ts <payload> <signature> <secret>
  *
  * Example:
- *   npx tsx verify-signature.ts '{"type":"checkout.completed"}' 'abc123...' 'whsec_xxx'
+ *   npx tsx verify-signature.ts '{"type":"checkout.completed"}' 'K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=' 'whsec_xxx'
+ *
+ * Recur signs the raw body with HMAC-SHA256 and sends it Base64-encoded in
+ * the X-Recur-Signature header (same as recur.webhooks.verify() in recur-tw/server).
  */
 
 import crypto from 'crypto'
 
-function verifySignature(payload: string, signature: string, secret: string): boolean {
-  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex')
+function verifySignature(payload: string, signature: string | null | undefined, secret: string): boolean {
+  // Match recur.webhooks.verify(): reject a missing X-Recur-Signature header and a blank
+  // secret before hashing, instead of throwing or verifying against an empty HMAC key.
+  if (!signature || !secret) return false
 
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-  } catch {
-    return false
-  }
+  const expected = crypto.createHmac('sha256', secret).update(payload).digest('base64')
+
+  const a = Buffer.from(signature)
+  const b = Buffer.from(expected)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
 function main() {
@@ -47,7 +52,7 @@ function main() {
     console.log('❌ Signature is INVALID')
 
     // Show expected signature for debugging
-    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex')
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('base64')
     console.log('')
     console.log('Expected:', expected)
     console.log('Received:', signature)
