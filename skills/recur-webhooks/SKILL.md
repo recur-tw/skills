@@ -4,7 +4,7 @@ description: Set up and handle Recur webhook events for payment notifications. U
 license: MIT
 metadata:
   author: recur
-  version: "0.0.11"
+  version: "0.0.13"
 ---
 
 # Recur Webhook Integration
@@ -22,8 +22,8 @@ You are helping implement Recur webhooks to receive real-time payment and subscr
 | `subscription.cancelled` | Subscription cancelled — check `data.status` / `data.current_period_end`: period-end cancellation keeps access until that date, while dashboard or refund cancellation revokes it immediately |
 | `subscription.renewed` | Recurring payment successful |
 | `subscription.past_due` | Payment failed, subscription at risk |
-| `invoice.paid` / `invoice.payment_failed` | Invoice outcome — check `billing_reason` (`subscription_cycle` = renewal, `subscription_update` = plan switch, `subscription_create`, `purchase`). A paid renewal also sends `subscription.renewed`; a failed charge also sends `subscription.past_due` only with a grace period. A renewal with no usable card sends NO invoice event — see `subscription.payment_method_required` / `subscription.revoked` |
-| `order.paid` | One-time purchase completed |
+| `invoice.paid` / `invoice.payment_failed` | Invoice outcome. Invoices exist only for renewals and plan switches, so `billing_reason` is `subscription_cycle` or `subscription_update` and **never** `subscription_create` — a first payment produces no invoice. A paid renewal also sends `subscription.renewed`; a failed charge also sends `subscription.past_due` only with a grace period. A renewal with no usable card sends NO invoice event — see `subscription.payment_method_required` / `subscription.revoked` |
+| `order.paid` / `order.payment_failed` | An order was paid or failed — **not one-time purchases only**. A subscription's first payment is an order, not an invoice, so both events also carry `billing_reason: 'subscription_create'`, and these are the ONLY events that report that first charge. Handle both branches: `purchase` is the one-time buy, `subscription_create` the signup. An empty `subscription_create` branch silently loses every new subscriber |
 | `refund.created` | Refund initiated |
 
 ### All Supported Events (`WEBHOOK_EVENT_TYPES` in `recur-tw/server`)
@@ -97,13 +97,32 @@ export async function POST(request: Request) {
     // subscription.payment_method_required (grace) or subscription.revoked (no grace).
     // Handle those below, or you will miss those failures entirely.
     case 'invoice.paid':
-      // invoice.paid is not renewal-only: a plan switch pays an invoice too. Branch on
-      // billing_reason — 'subscription_cycle' is the renewal, 'subscription_update' the
-      // switch, 'subscription_create' the first payment, 'purchase' a one-off.
+      // Invoices exist only for renewals and plan switches, so billing_reason here is
+      // 'subscription_cycle' or 'subscription_update' — never 'subscription_create'.
+      // A subscription's FIRST payment produces no invoice at all; it arrives as
+      // order.paid. One-time purchases produce no invoice either.
       if (event.data.billing_reason === 'subscription_cycle') {
         await handleRenewal(event.data)        // extend access, record recurring revenue
       } else {
-        await handleInvoicePaid(event.data)    // switches, first payments, one-offs
+        await handleSwitchInvoice(event.data)  // 'subscription_update': the plan switch
+      }
+      break
+    case 'order.paid':
+      // Orders cover BOTH one-time buys and a subscription's first payment. Nothing else
+      // reports that first payment, so both branches have to do real work.
+      if (event.data.billing_reason === 'purchase') {
+        await handleOneTimePurchase(event.data)
+      } else {
+        await handleFirstSubscriptionPayment(event.data)   // 'subscription_create'
+      }
+      break
+    case 'order.payment_failed':
+      // Same split. A failed signup emits ONLY this event — no invoice.payment_failed
+      // follows it — so an empty branch here loses the failure entirely.
+      if (event.data.billing_reason === 'purchase') {
+        await handlePurchaseFailed(event.data)
+      } else {
+        await handleSignupFailed(event.data)               // 'subscription_create'
       }
       break
     case 'subscription.renewed':
@@ -143,8 +162,12 @@ async function handleSubscriptionCancelled(data: Payload) {
   // Period-end cancellation: keep access until current_period_end.
   // Immediate cancellation (dashboard, refund): status is already "canceled" — revoke now.
 }
-async function handleRenewal(data: Payload) {}        // billing_reason 'subscription_cycle'
-async function handleInvoicePaid(data: Payload) {}    // every other billing_reason
+async function handleRenewal(data: Payload) {}          // invoice, 'subscription_cycle'
+async function handleSwitchInvoice(data: Payload) {}    // invoice, 'subscription_update'
+async function handleOneTimePurchase(data: Payload) {}  // order, 'purchase'
+async function handleFirstSubscriptionPayment(data: Payload) {}  // order, 'subscription_create'
+async function handlePurchaseFailed(data: Payload) {}   // order failure, 'purchase'
+async function handleSignupFailed(data: Payload) {}     // order failure, 'subscription_create'
 async function handlePaymentFailure(data: Payload) {}
 async function handleRefundCreated(data: Payload) {}
 ```
@@ -154,12 +177,14 @@ async function handleRefundCreated(data: Payload) {}
 ```typescript
 import express from 'express'
 import { Recur } from 'recur-tw/server'
+// Your own dispatch — the claim-first version is in "Idempotency" below.
+import { handleEvent } from './handle-event'
 
 const app = express()
 const recur = new Recur(process.env.RECUR_SECRET_KEY!)
 
 // Use the raw body for signature verification
-app.post('/api/webhooks/recur', express.raw({ type: 'application/json' }), (req, res) => {
+app.post('/api/webhooks/recur', express.raw({ type: 'application/json' }), async (req, res) => {
   const payload = req.body.toString()
   const signature = req.header('x-recur-signature') ?? null
 
@@ -170,7 +195,14 @@ app.post('/api/webhooks/recur', express.raw({ type: 'application/json' }), (req,
     return res.status(401).json({ error: 'Invalid signature' })
   }
 
-  console.log('Received event:', event.type, event.id)   // envelope id: present on every event
+  // Dispatch before answering: a 2xx tells Recur the event is handled.
+  try {
+    await handleEvent(event)
+  } catch (err) {
+    console.error('webhook handler failed', event.id, err)
+    return res.status(500).json({ error: 'handler failed' })   // Recur retries
+  }
+
   res.json({ received: true })
 })
 ```
@@ -233,6 +265,8 @@ interface WebhookEvent {
 
 // Enum-derived fields (status, type, billing_reason, switch_type, reason) are lowercased
 // before delivery: "active", "canceled", "complete" — compare against lowercase values.
+// The REST API does NOT do this: the same field reads "SUBSCRIPTION_UPDATE" / "ACTIVE"
+// there (see openapi.json). Only webhook payloads are lowercased.
 
 // Example: checkout.completed
 {
@@ -290,7 +324,8 @@ MCP: `test_webhook` sends a test event to your endpoint; `get_webhook_events` sh
 
 ### 1. Always Verify Signatures
 
-Never trust webhook payloads without `recur.webhooks.verify()`.
+Never trust a webhook payload you have not verified — with `recur.webhooks.verify()`, or
+with one of the constant-time verifiers above if you are not using the SDK.
 
 ### 2. Handle Idempotency
 

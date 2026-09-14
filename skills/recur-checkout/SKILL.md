@@ -4,7 +4,7 @@ description: Implement Recur checkout flows including embedded, modal, and redir
 license: MIT
 metadata:
   author: recur
-  version: "0.0.11"
+  version: "0.0.13"
 ---
 
 # Recur Checkout Integration
@@ -261,7 +261,7 @@ function PricingPage() {
 
 `Product` fields: `id`, `name`, `slug`, `description`, `type`, `billingPeriod`
 (`'MONTHLY' | 'YEARLY' | ... | null`), `price` (whole TWD), `currency`, `trialDays`,
-`metadata`. There is no `priceFormatted` on the SDK type — format with
+`metadata`, `productFamily`, `displayOrder`. There is no `priceFormatted` on the SDK type — format with
 `` `NT$${product.price.toLocaleString()}` ``.
 
 ## Payment Failed Handling
