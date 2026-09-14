@@ -4,7 +4,7 @@ description: Quick setup guide for Recur payment integration, from account signu
 license: MIT
 metadata:
   author: recur
-  version: "0.0.9"
+  version: "0.0.10"
 ---
 
 # Recur Quickstart
@@ -34,9 +34,10 @@ OAuth flow**, so make sure the `recur` MCP server is connected. Pick ONE:
 
 Before the first tool call, tell the user what will happen:
 
-> A browser window will open. Log in, or click **註冊** (Sign up) on the login
-> page to create a Recur account, then approve the connection. New accounts
-> start in sandbox mode.
+> A browser window will open. Log in, or click **建立新帳號** (Create account) on
+> the login page to create a Recur account, then approve the connection. Keep
+> the default scopes — Step 0 needs `api-keys:write` and `products:write`.
+> New accounts start in sandbox mode.
 
 Then, through MCP:
 

@@ -4,7 +4,7 @@ description: Implement access control and permission checking with Recur entitle
 license: MIT
 metadata:
   author: recur
-  version: "0.0.9"
+  version: "0.0.10"
 ---
 
 # Recur Entitlements & Access Control
@@ -71,7 +71,7 @@ const { check } = useCustomer()
 // Check by product slug
 const { allowed, entitlement } = check('pro-plan')
 
-// Check by product ID
+// Check by product ID (a CUID from list_products, e.g. 'cmfxq8n2a0001l8yz3k5p9t7d'; 'prod_xxx' is a placeholder)
 const { allowed } = check('prod_xxx')
 
 if (allowed) {

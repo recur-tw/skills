@@ -4,7 +4,7 @@ description: Implement Recur checkout flows including embedded, modal, and redir
 license: MIT
 metadata:
   author: recur
-  version: "0.0.9"
+  version: "0.0.10"
 ---
 
 # Recur Checkout Integration
@@ -203,9 +203,11 @@ onPaymentFailed: (error) => {
 
 For server-rendered apps or custom flows:
 
+Product IDs are CUIDs from `list_products` / the dashboard (e.g. `cmfxq8n2a0001l8yz3k5p9t7d`); `prod_xxx` is a placeholder.
+
 ```typescript
 // Create checkout session
-const response = await fetch('https://api.recur.tw/v1/checkouts', {
+const response = await fetch('https://api.recur.tw/v1/checkout/sessions', {
   method: 'POST',
   headers: {
     'X-Recur-Secret-Key': process.env.RECUR_SECRET_KEY,
@@ -219,8 +221,10 @@ const response = await fetch('https://api.recur.tw/v1/checkouts', {
   }),
 })
 
-const { checkoutUrl } = await response.json()
-// Redirect user to checkoutUrl
+// The session object is the response body itself (no outer `data` wrapper, snake_case keys)
+const { url } = await response.json()
+// Redirect the customer to `url` — the hosted checkout page.
+// (/v1/checkouts is the embedded-form endpoint and returns a different shape.)
 ```
 
 ## Checkout Result Structure
