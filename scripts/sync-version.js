@@ -8,6 +8,7 @@ const skillsDir = join(__dirname, '..', 'skills')
 const pkgPath = join(__dirname, '..', 'package.json')
 const mpPath = join(__dirname, '..', '.claude-plugin', 'marketplace.json')
 const pluginPath = join(__dirname, '..', '.claude-plugin', 'plugin.json')
+const portablePluginPath = join(__dirname, '..', 'plugin.json')
 
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 
@@ -23,6 +24,11 @@ const plugin = JSON.parse(readFileSync(pluginPath, 'utf8'))
 plugin.version = pkg.version
 writeFileSync(pluginPath, JSON.stringify(plugin, null, 2) + '\n')
 console.log(`✓ Synced plugin.json to ${pkg.version}`)
+
+const portable = JSON.parse(readFileSync(portablePluginPath, 'utf8'))
+portable.version = pkg.version
+writeFileSync(portablePluginPath, JSON.stringify(portable, null, 2) + '\n')
+console.log(`✓ Synced portable plugin.json to ${pkg.version}`)
 
 // Sync all SKILL.md files
 const skillFolders = readdirSync(skillsDir, { withFileTypes: true })

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "recur-skills",
+  "version": "0.0.8",
+  "description": "Skills for Recur SDK integration: quickstart, checkout, webhooks, entitlements, and customer portal. Taiwan subscription billing via PAYUNi.",
+  "author": {
+    "name": "Recur",
+    "email": "hi@recur.tw",
+    "url": "https://recur.tw"
+  },
+  "homepage": "https://docs.recur.tw/guides/skills",
+  "repository": "https://github.com/recur-tw/skills",
+  "license": "MIT",
+  "keywords": [
+    "recur",
+    "payments",
+    "taiwan",
+    "subscription",
+    "checkout",
+    "webhooks",
+    "payuni"
+  ]
+}
