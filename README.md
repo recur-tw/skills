@@ -14,12 +14,22 @@ Supports Claude Code, Cursor, Codex, GitHub Copilot, Gemini CLI, Antigravity, an
 npx skills add recur-tw/skills
 ```
 
-### Claude Code Plugin
+### Claude Code Plugin (skills + MCP server)
 
 ```bash
 /plugin marketplace add recur-tw/skills
 /plugin install recur-skills@recur-skills
 ```
+
+The plugin bundles the Recur MCP server (`https://mcp.recur.tw/`, see `.mcp.json`).
+After installing, run `/mcp` and authorize `recur` — no account yet? Click 註冊 on the
+login page; the account is created inside the OAuth flow.
+
+### MCP for other agents
+
+`npx skills add` installs skills only. Add `https://mcp.recur.tw/` as a remote MCP
+server in Cursor, VS Code, Codex, Gemini CLI, or Claude Desktop — one-click links
+and config snippets at https://docs.recur.tw/guides/mcp.
 
 Or from a shell:
 
@@ -36,6 +46,12 @@ Not sure where to begin? Ask Claude:
 
 ```
 Recur 有什麼功能？
+```
+
+No Recur account yet? Ask:
+
+```
+幫我申請 Recur 帳號，建立每月 $499 的訂閱方案並串接付款流程
 ```
 
 Or type `/recur-help` to see all available skills.

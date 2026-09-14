@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "recur-skills",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Skills for Recur SDK integration: quickstart, checkout, webhooks, entitlements, and customer portal. Taiwan subscription billing via PAYUNi.",
   "author": {
     "name": "Recur",

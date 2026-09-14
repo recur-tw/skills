@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "recur-skills",
   "displayName": "Recur Skills",
-  "version": "0.0.8",
-  "description": "Skills for Recur SDK integration: quickstart, checkout, webhooks, entitlements, and customer portal.",
+  "version": "0.0.9",
+  "description": "Skills for Recur SDK integration (quickstart, checkout, webhooks, entitlements, customer portal) plus the Recur MCP server (https://mcp.recur.tw/) for account signup, API keys, and products.",
   "author": {
     "name": "Recur",
     "email": "hi@recur.tw",
@@ -18,6 +18,8 @@
     "taiwan",
     "subscription",
     "checkout",
-    "webhooks"
-  ]
+    "webhooks",
+    "mcp"
+  ],
+  "mcpServers": "./.mcp.json"
 }

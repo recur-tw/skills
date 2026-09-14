@@ -1,7 +1,7 @@
 {
   "name": "recur-skills",
-  "version": "0.0.8",
-  "description": "Claude Code skills for Recur - Taiwan's subscription payment platform",
+  "version": "0.0.9",
+  "description": "Claude Code skills and MCP plugin for Recur - Taiwan's subscription payment platform",
   "keywords": [
     "recur",
     "claude-code",
@@ -40,7 +40,8 @@
     "skills",
     ".claude-plugin",
     "plugin.json",
-    "mcp.json"
+    "mcp.json",
+    ".mcp.json"
   ],
   "scripts": {
     "build": "tsdown",

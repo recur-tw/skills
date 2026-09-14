@@ -4,7 +4,7 @@ description: List all available Recur skills and how to use them. Use when user 
 license: MIT
 metadata:
   author: recur
-  version: "0.0.8"
+  version: "0.0.9"
 ---
 
 # Recur Skills 使用指南
@@ -42,6 +42,12 @@ metadata:
 **觸發方式**：
 - 說：「加上帳戶管理」「customer portal」「訂閱管理」「更新付款方式」
 - 或輸入：`/recur-portal`
+
+## 帳號與 MCP
+
+還沒有 Recur 帳號、API key 或商品時，先用 `/recur-quickstart` 的 Step 0：連上
+Recur MCP（`https://mcp.recur.tw/`，plugin 安裝者直接 `/mcp` 授權），在 OAuth
+登入頁點「註冊」即可建立帳號，接著用 MCP 工具建立 API key 與商品。
 
 ## 回覆格式
 

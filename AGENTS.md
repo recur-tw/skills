@@ -13,8 +13,12 @@ skills/
 ├── AGENTS.md              # This file - agent guidelines
 ├── README.md              # User-facing documentation
 ├── package.json           # npm package config
+├── .mcp.json              # Recur MCP server bundled with the Claude Code plugin
+├── plugin.json            # Portable manifest (agent-plugins.org schema)
+├── mcp.json               # Portable MCP server declaration (agent-plugins.org schema)
 ├── .claude-plugin/
-│   └── marketplace.json   # Claude Code plugin registry
+│   ├── marketplace.json   # Claude Code plugin registry
+│   └── plugin.json        # Plugin manifest (mcpServers: "./.mcp.json", resolved from the plugin root)
 └── skills/
     ├── recur-help/
     │   └── SKILL.md
@@ -24,7 +28,9 @@ skills/
     │   └── SKILL.md
     ├── recur-webhooks/
     │   └── SKILL.md
-    └── recur-entitlements/
+    ├── recur-entitlements/
+    │   └── SKILL.md
+    └── recur-portal/
         └── SKILL.md
 ```
 
