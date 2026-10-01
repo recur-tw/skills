@@ -22,7 +22,7 @@ npx skills add recur-tw/skills
 ```
 
 The plugin bundles the Recur MCP server (`https://mcp.recur.tw/`, see `.mcp.json`).
-After installing, run `/mcp` and authorize `recur` — no account yet? Click 註冊 on the
+After installing, run `/mcp` and authorize `recur` — no account yet? Click 建立新帳號 on the
 login page; the account is created inside the OAuth flow.
 
 ### MCP for other agents

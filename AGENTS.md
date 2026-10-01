@@ -114,10 +114,9 @@ const { allowed } = check('pro-plan')
 When helping with Recur integration:
 
 1. **Language**: Respond in Traditional Chinese (繁體中文) for Taiwanese users
-2. **Framework**: Assume Next.js App Router unless specified otherwise
-3. **Imports**: Always use `recur-tw` package, not `@recur/sdk` or other variants
-4. **API Keys**: Remind users to get keys from `app.recur.tw` → Settings → Developers
-5. **Error Handling**: Include try/catch with user-friendly error messages
+2. **Framework**: Follow the project's framework; the skill examples use Next.js App Router
+3. **Imports**: The npm package is `recur-tw` (not `recur` or `@recur/sdk`)
+4. **API Keys**: Create sandbox keys with the MCP `create_api_key` tool, or copy them from `app.recur.tw` → 開發者 → API 金鑰
 
 ## SKILL.md Standards
 

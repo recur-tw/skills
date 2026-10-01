@@ -56,7 +56,7 @@ Then, through MCP:
    such as `cm5x…`, not a `prod_` prefix).
 
 No MCP available? The CLI does the same once the user has a secret key from
-the dashboard (app.recur.tw → 設定 → 開發者):
+the dashboard (app.recur.tw → 開發者 → API 金鑰):
 
 ```bash
 npx @recur-tw/cli login
@@ -76,7 +76,7 @@ npm install recur-tw
 
 ## Step 2: Get API Keys
 
-Use the SANDBOX key pair from Step 0 (MCP `create_api_key`), or copy one from the dashboard at `app.recur.tw` → 設定 → 開發者.
+Use the SANDBOX key pair from Step 0 (MCP `create_api_key`), or copy one from the dashboard at `app.recur.tw` → 開發者 → API 金鑰.
 
 **Key formats:**
 - `pk_test_xxx` - Publishable key (frontend, safe to expose)

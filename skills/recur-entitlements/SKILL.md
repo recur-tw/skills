@@ -411,8 +411,11 @@ export async function GET(req: Request) {
 ### Multiple Product Tiers
 
 ```tsx
-function PricingGate() {
+function PricingGate({ customerKey }: { customerKey: string | null | undefined }) {
   const { check } = useCustomer()
+  const ready = useEntitlementsReady(customerKey)
+
+  if (!ready) return <div>Loading...</div>
 
   const hasPro = check('pro-plan').allowed
   const hasEnterprise = check('enterprise-plan').allowed

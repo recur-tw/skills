@@ -305,7 +305,7 @@ RECUR_SECRET_KEY=sk_test_xxx       # server key; the Recur client refuses to con
 RECUR_WEBHOOK_SECRET=whsec_xxx     # per-endpoint signing secret from the step above
 ```
 
-The hand-rolled verifiers below need only `RECUR_WEBHOOK_SECRET`.
+The hand-rolled verifiers in "Without the SDK" above need only `RECUR_WEBHOOK_SECRET`.
 
 ## Testing Webhooks Locally
 

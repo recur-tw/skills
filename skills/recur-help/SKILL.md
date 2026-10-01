@@ -47,26 +47,9 @@ metadata:
 
 還沒有 Recur 帳號、API key 或商品時，先用 `/recur-quickstart` 的 Step 0：連上
 Recur MCP（`https://mcp.recur.tw/`，plugin 安裝者直接 `/mcp` 授權），在 OAuth
-登入頁點「註冊」即可建立帳號，接著用 MCP 工具建立 API key 與商品。
+登入頁點「建立新帳號」即可建立帳號，接著用 MCP 工具建立 API key 與商品。
 
-## 回覆格式
+## 回覆方式
 
-用繁體中文回覆，格式如下：
-
-```
-## Recur Skills 使用指南
-
-我可以幫你完成以下 Recur 整合任務：
-
-| Skill | 用途 | 怎麼觸發 |
-|-------|------|---------|
-| **quickstart** | 快速開始整合 | 說「幫我整合 Recur」 |
-| **checkout** | 結帳流程 | 說「加上結帳按鈕」 |
-| **webhooks** | 付款通知 | 說「設定 webhook」 |
-| **entitlements** | 權限檢查 | 說「檢查付費權限」 |
-| **portal** | 客戶自助入口 | 說「加上帳戶管理」 |
-
-💡 **建議從 quickstart 開始**，它會引導你完成 SDK 安裝和基本設定。
-
-有什麼想做的嗎？
-```
+用使用者的語言回覆（台灣使用者用繁體中文）。用一張表列出上面五個 skills 的用途和一句觸發說法；
+還沒開始串接的人建議從 `recur-quickstart` 開始，最後問對方想做什麼。

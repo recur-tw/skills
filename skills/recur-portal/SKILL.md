@@ -295,27 +295,29 @@ Configure portal behavior in Recur Dashboard → Settings → Customer Portal:
 ## Error Handling
 
 ```typescript
+import { RecurAPIError } from 'recur-tw/server'
+
+let session
 try {
-  const session = await recur.portal.sessions.create({
+  session = await recur.portal.sessions.create({
     email: userEmail,
     returnUrl: returnUrl,
   })
-  redirect(session.url)
 } catch (error) {
-  if (error.code === 'customer_not_found') {
-    // Customer doesn't exist in Recur
-    // Maybe they haven't subscribed yet
+  if (error instanceof RecurAPIError && error.code === 'not_found') {
+    // No Recur customer matches this email / externalId / customer id,
+    // usually because they have not bought anything yet
     redirect('/pricing')
   }
-
-  if (error.code === 'missing_return_url') {
-    // returnUrl is required
-    console.error('Missing return URL')
-  }
-
+  // code 'bad_request': neither returnUrl nor a default return URL
+  // (Dashboard → Settings → Customer Portal) is set
   throw error
 }
+redirect(session.url)
 ```
+
+Keep `redirect()` outside the `try`: in Next.js it works by throwing, and a
+surrounding `catch` would intercept it.
 
 ## Related Skills
 
