@@ -132,12 +132,11 @@ description: Clear description with trigger keywords...
 license: MIT
 metadata:
   author: recur
-  version: "0.0.5"
+  version: "<plugin version>"   # written by scripts/sync-version.js; do not hand-edit
 ---
 ```
 
 **Content Guidelines**:
-- Keep under 500 lines for context efficiency
 - Include working code examples
 - Show both basic and advanced patterns
 - Reference related skills at the end
