@@ -292,7 +292,7 @@ interface WebhookEvent {
 
 ## Webhook Configuration
 
-1. **Recur Dashboard** → **Settings** → **Webhooks** → **Add Endpoint** (or MCP `create_webhook`)
+1. **Recur Dashboard** → **開發者** → **Webhooks** (`app.recur.tw/developers/webhooks`) → add an endpoint (or MCP `create_webhook`)
 2. Enter your endpoint URL (e.g., `https://yourapp.com/api/webhooks/recur`)
 3. Select events to receive
 4. Copy the **Webhook Secret** into `RECUR_WEBHOOK_SECRET`
@@ -302,7 +302,7 @@ variable holds a real `sk_` key — a webhook-only service still needs one:
 
 ```bash
 RECUR_SECRET_KEY=sk_test_xxx       # server key; the Recur client refuses to construct without it
-RECUR_WEBHOOK_SECRET=whsec_xxx     # per-endpoint signing secret from the step above
+RECUR_WEBHOOK_SECRET=<secret>      # per-endpoint signing secret from the step above (64-char hex, no prefix)
 ```
 
 The hand-rolled verifiers in "Without the SDK" above need only `RECUR_WEBHOOK_SECRET`.
@@ -317,6 +317,10 @@ ngrok http 3000
 # Or forward live events to your dev server with the CLI (after `npx @recur-tw/cli login`)
 npx @recur-tw/cli webhooks listen http://localhost:3000/api/webhooks/recur
 ```
+
+`webhooks listen` re-signs every forwarded event with its own per-session secret
+(`whsec_…`, printed as "Signing secret" when it connects), not your endpoint's secret.
+Set `RECUR_WEBHOOK_SECRET` to that value while listening, or every event fails verification.
 
 MCP: `test_webhook` sends a test event to your endpoint; `get_webhook_events` shows deliveries.
 

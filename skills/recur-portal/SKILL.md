@@ -289,7 +289,7 @@ Configure portal behavior in Recur Dashboard → Settings → Customer Portal:
 
 1. **Server-side only**: Portal sessions require Secret Key (sk_xxx)
 2. **Short-lived**: Sessions expire in 1 hour
-3. **One-time use**: Each session URL should only be used once
+3. **Reusable until expiry**: the URL keeps working for that hour, so create it on demand and never log or email it
 4. **Verify user**: Always authenticate the user before creating a portal session
 
 ## Error Handling

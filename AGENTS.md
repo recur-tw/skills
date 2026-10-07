@@ -77,7 +77,8 @@ Key exports:
 ```bash
 NEXT_PUBLIC_RECUR_PUBLISHABLE_KEY=pk_test_xxx  # Frontend
 RECUR_SECRET_KEY=sk_test_xxx                    # Backend only
-RECUR_WEBHOOK_SECRET=whsec_xxx                  # Webhook verification
+RECUR_WEBHOOK_SECRET=<secret>                   # Webhook verification: the endpoint's 64-char hex secret;
+                                                # while running `webhooks listen`, the session's whsec_ secret instead
 ```
 
 ### Common Patterns
@@ -105,6 +106,8 @@ await subscribe({ productId })
 
 **Entitlement Check**
 ```tsx
+// Needs <RecurProvider customer={...}>. Gate on a first completed load before trusting
+// the answer; see recur-entitlements ("Knowing when the answer is real").
 const { check } = useCustomer()
 const { allowed } = check('pro-plan')
 ```

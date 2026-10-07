@@ -60,7 +60,7 @@ the dashboard (app.recur.tw → 開發者 → API 金鑰):
 
 ```bash
 npx @recur-tw/cli login
-recur products create --name "Pro" --price 499 --interval monthly --type SUBSCRIPTION
+npx @recur-tw/cli products create --name "Pro" --price 499 --interval monthly --type SUBSCRIPTION
 ```
 
 Charging real cards requires merchant review (apply from app.recur.tw when
@@ -173,8 +173,8 @@ Create a webhook endpoint to receive payment notifications. See the `recur-webho
 - Ensure using publishable key for frontend, secret key for backend
 
 ### "Product not found"
-- Create one first: MCP `create_product`, `recur products create`, or the dashboard
-- Use the real `id` returned by `list_products` / `recur products list` (a CUID like
+- Create one first: MCP `create_product`, `npx @recur-tw/cli products create`, or the dashboard
+- Use the real `id` returned by `list_products` / `npx @recur-tw/cli products list` (a CUID like
   `cm5x…`; Recur product IDs have no `prod_` prefix), never a placeholder
 - Check you're using the correct environment (sandbox vs production keys)
 
